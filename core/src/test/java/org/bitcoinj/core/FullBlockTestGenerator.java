@@ -1223,7 +1223,7 @@ public class FullBlockTestGenerator {
             checkState(b64Original.block.getMessageSize() == Block.MAX_BLOCK_SIZE);
 
             UnsafeByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(b64Original.block.getMessageSize() + 8);
-            b64Original.block.writeHeader(stream);
+            b64Original.block.writeHeader(stream, false);
 
             byte[] varIntBytes = new byte[9];
             varIntBytes[0] = (byte) 255;
