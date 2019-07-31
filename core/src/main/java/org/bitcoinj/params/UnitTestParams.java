@@ -18,6 +18,7 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
+import org.bitcoinj.script.Script;
 
 import java.math.BigInteger;
 
@@ -29,6 +30,7 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
     public static final int UNITNET_MAJORITY_WINDOW = 8;
     public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 6;
     public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 4;
+    private static final String ZERO_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
     public UnitTestParams() {
         super();
@@ -38,7 +40,11 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         p2shHeader = 196;
         maxTarget = new BigInteger("00ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
         genesisBlock.setTime(System.currentTimeMillis() / 1000);
-        genesisBlock.setDifficultyTarget(Block.EASIEST_DIFFICULTY_TARGET);
+        genesisBlock.setContractHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setAttestationHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setMappingHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setBlockHeight(0);
+        genesisBlock.setChallengeScript(new Script(Utils.HEX.decode("51")));
         genesisBlock.solve();
         port = 18333;
         interval = 10;

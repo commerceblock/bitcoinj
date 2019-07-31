@@ -52,6 +52,9 @@ public abstract class Message {
 
     protected int length = UNKNOWN_LENGTH;
 
+    // A flag used to determine if the full payload read is necessary (e.g. headers only block)
+    protected boolean readIncomplete = false;
+
     // The raw message payload bytes themselves.
     protected byte[] payload;
 
@@ -88,25 +91,16 @@ public abstract class Message {
      * @throws ProtocolException
      */
     protected Message(NetworkParameters params, byte[] payload, int offset, int protocolVersion, MessageSerializer serializer, int length) throws ProtocolException {
-        this.serializer = serializer;
-        this.protocolVersion = protocolVersion;
-        this.params = params;
-        this.payload = payload;
-        this.cursor = this.offset = offset;
-        this.length = length;
+        initializeConstructor(params, payload, offset, protocolVersion, serializer, length);
+    }
 
-        parse();
-
-        if (this.length == UNKNOWN_LENGTH)
-            checkState(false, "Length field has not been set in constructor for %s after parse.",
-                       getClass().getSimpleName());
-        
-        if (SELF_CHECK) {
-            selfCheck(payload, offset);
-        }
-        
-        if (!serializer.isParseRetainMode())
-            this.payload = null;
+    /* Same as above but is passed an extra param which indicates that not all of the payload is necessary. 
+     * For example only the header should be read from a full block payload where the header is of variable size.
+     */
+    protected Message(NetworkParameters params, byte[] payload, int offset, int protocolVersion, MessageSerializer serializer, int length,
+        boolean readIncomplete) throws ProtocolException {
+        this.readIncomplete = readIncomplete;
+        initializeConstructor(params, payload, offset, protocolVersion, serializer, length);
     }
 
     private void selfCheck(byte[] payload, int offset) {
@@ -129,6 +123,33 @@ public abstract class Message {
     protected Message(NetworkParameters params, byte[] payload, int offset, MessageSerializer serializer, int length) throws ProtocolException {
         this(params, payload, offset, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT),
              serializer, length);
+    }
+
+    protected Message(NetworkParameters params, byte[] payload, int offset, MessageSerializer serializer, int length, boolean readIncomplete) throws ProtocolException {
+        this(params, payload, offset, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT),
+             serializer, length, readIncomplete);
+    }
+
+    protected void initializeConstructor(NetworkParameters params, byte[] payload, int offset, int protocolVersion, MessageSerializer serializer, int length) throws ProtocolException {
+        this.serializer = serializer;
+        this.protocolVersion = protocolVersion;
+        this.params = params;
+        this.payload = payload;
+        this.cursor = this.offset = offset;
+        this.length = length;
+
+        parse();
+
+        if (this.length == UNKNOWN_LENGTH)
+            checkState(false, "Length field has not been set in constructor for %s after parse.",
+                       getClass().getSimpleName());
+        
+        if (SELF_CHECK) {
+            selfCheck(payload, offset);
+        }
+        
+        if (!serializer.isParseRetainMode())
+            this.payload = null;
     }
 
     // These methods handle the serialization/deserialization using the custom Bitcoin protocol.

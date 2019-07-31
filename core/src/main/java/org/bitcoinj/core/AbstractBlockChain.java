@@ -465,7 +465,9 @@ public abstract class AbstractBlockChain {
             } else {
                 checkState(lock.isHeldByCurrentThread());
                 // It connects to somewhere on the chain. Not necessarily the top of the best known chain.
-                params.checkDifficultyTransitions(storedPrev, block, blockStore);
+
+                // TODO may need to write up challenge script validation to make sure that the top we are connecting to is valid.
+                // params.checkDifficultyTransitions(storedPrev, block, blockStore);
                 connectBlock(block, storedPrev, shouldVerifyTransactions(), filteredTxHashList, filteredTxn);
             }
 

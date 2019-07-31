@@ -41,7 +41,7 @@ public class StoredBlock {
     // bytes to represent this field, so 12 bytes should be plenty for now.
     public static final int CHAIN_WORK_BYTES = 12;
     public static final byte[] EMPTY_BYTES = new byte[CHAIN_WORK_BYTES];
-    public static final int COMPACT_SERIALIZED_SIZE = Block.HEADER_SIZE + CHAIN_WORK_BYTES + 4;  // for height
+    public int COMPACT_SERIALIZED_SIZE = Block.HEADER_SIZE_FULL + CHAIN_WORK_BYTES + 4;  // for height
 
     private Block header;
     private BigInteger chainWork;
@@ -49,6 +49,7 @@ public class StoredBlock {
 
     public StoredBlock(Block header, BigInteger chainWork, int height) {
         this.header = header;
+        COMPACT_SERIALIZED_SIZE = this.header.HEADER_SIZE_FULL + CHAIN_WORK_BYTES + 4;
         this.chainWork = chainWork;
         this.height = height;
     }
@@ -128,7 +129,7 @@ public class StoredBlock {
         // Using unsafeBitcoinSerialize here can give us direct access to the same bytes we read off the wire,
         // avoiding serialization round-trips.
         byte[] bytes = getHeader().unsafeBitcoinSerialize();
-        buffer.put(bytes, 0, Block.HEADER_SIZE);  // Trim the trailing 00 byte (zero transactions).
+        buffer.put(bytes, 0, getHeader().HEADER_SIZE_FULL);  // Trim the trailing 00 byte (zero transactions).
     }
 
     /** De-serializes the stored block from a custom packed format. Used by {@link CheckpointManager}. */
@@ -137,9 +138,9 @@ public class StoredBlock {
         buffer.get(chainWorkBytes);
         BigInteger chainWork = new BigInteger(1, chainWorkBytes);
         int height = buffer.getInt();  // +4 bytes
-        byte[] header = new byte[Block.HEADER_SIZE + 1];    // Extra byte for the 00 transactions length.
-        buffer.get(header, 0, Block.HEADER_SIZE);
-        return new StoredBlock(params.getDefaultSerializer().makeBlock(header), chainWork, height);
+        byte[] header = new byte[buffer.remaining()];
+        buffer.get(header, 0, buffer.remaining());
+        return new StoredBlock(params.getDefaultSerializer().makeBlockHeader(header), chainWork, height);
     }
 
     @Override

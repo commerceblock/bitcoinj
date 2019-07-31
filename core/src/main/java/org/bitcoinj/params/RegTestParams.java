@@ -18,6 +18,8 @@
 package org.bitcoinj.params;
 
 import org.bitcoinj.core.Block;
+import org.bitcoinj.core.Utils;
+import org.bitcoinj.script.Script;
 
 import java.math.BigInteger;
 
@@ -28,6 +30,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class RegTestParams extends AbstractBitcoinNetParams {
     private static final BigInteger MAX_TARGET = new BigInteger("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16);
+    private static final String ZERO_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
     public RegTestParams() {
         super();
@@ -38,8 +41,11 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         dumpedPrivateKeyHeader = 239;
         segwitAddressHrp = "bcrt";
         genesisBlock.setTime(1296688602L);
-        genesisBlock.setDifficultyTarget(0x1d07fff8L);
-        genesisBlock.setNonce(384568319);
+        genesisBlock.setContractHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setAttestationHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setMappingHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setBlockHeight(0);
+        genesisBlock.setChallengeScript(new Script(Utils.HEX.decode("51")));
         spendableCoinbaseDepth = 100;
         String genesisHash = genesisBlock.getHashAsString();
         checkState(genesisHash.equals("00000007199508e34a9ff81e6ec0c477a4cccff2a4767a8eee39c11db367b008"));
@@ -76,8 +82,6 @@ public class RegTestParams extends AbstractBitcoinNetParams {
         synchronized (RegTestParams.class) {
             if (genesis == null) {
                 genesis = super.getGenesisBlock();
-                genesis.setNonce(2);
-                genesis.setDifficultyTarget(0x207fFFFFL);
                 genesis.setTime(1296688602L);
                 checkState(genesis.getHashAsString().toLowerCase().equals("0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
             }

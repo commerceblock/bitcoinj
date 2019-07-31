@@ -19,6 +19,7 @@ package org.bitcoinj.params;
 
 import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.*;
+import org.bitcoinj.script.Script;
 
 import java.net.*;
 
@@ -31,6 +32,7 @@ public class MainNetParams extends AbstractBitcoinNetParams {
     public static final int MAINNET_MAJORITY_WINDOW = 1000;
     public static final int MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED = 950;
     public static final int MAINNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 750;
+    private static final String ZERO_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
     public MainNetParams() {
         super();
@@ -52,9 +54,12 @@ public class MainNetParams extends AbstractBitcoinNetParams {
         majorityRejectBlockOutdated = MAINNET_MAJORITY_REJECT_BLOCK_OUTDATED;
         majorityWindow = MAINNET_MAJORITY_WINDOW;
 
-        genesisBlock.setDifficultyTarget(0x1d00ffffL);
         genesisBlock.setTime(1231006505L);
-        genesisBlock.setNonce(2083236893);
+        genesisBlock.setContractHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setAttestationHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setMappingHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setBlockHeight(0);
+        genesisBlock.setChallengeScript(new Script(Utils.HEX.decode("51")));
         id = ID_MAINNET;
         subsidyDecreaseBlockCount = 210000;
         spendableCoinbaseDepth = 100;

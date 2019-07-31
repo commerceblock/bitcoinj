@@ -25,6 +25,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.store.BlockStore;
 import org.bitcoinj.store.BlockStoreException;
 
@@ -38,6 +39,7 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
     public static final int TESTNET_MAJORITY_WINDOW = 100;
     public static final int TESTNET_MAJORITY_REJECT_BLOCK_OUTDATED = 75;
     public static final int TESTNET_MAJORITY_ENFORCE_BLOCK_UPGRADE = 51;
+    private static final String ZERO_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
 
     public TestNet3Params() {
         super();
@@ -52,8 +54,11 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
         dumpedPrivateKeyHeader = 239;
         segwitAddressHrp = "tb";
         genesisBlock.setTime(1296688602L);
-        genesisBlock.setDifficultyTarget(0x1d00ffffL);
-        genesisBlock.setNonce(414098458);
+        genesisBlock.setContractHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setAttestationHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setMappingHash(Utils.HEX.decode(ZERO_HASH));
+        genesisBlock.setBlockHeight(0);
+        genesisBlock.setChallengeScript(new Script(Utils.HEX.decode("51")));
         spendableCoinbaseDepth = 100;
         subsidyDecreaseBlockCount = 210000;
         String genesisHash = genesisBlock.getHashAsString();
