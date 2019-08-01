@@ -18,13 +18,12 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.script.Script;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
-import org.bouncycastle.crypto.params.KeyParameter;
-import org.bouncycastle.math.ec.ECPoint;
+import org.spongycastle.crypto.params.KeyParameter;
+import org.spongycastle.math.ec.ECPoint;
 
 import javax.annotation.Nullable;
 import java.math.BigInteger;
@@ -98,18 +97,6 @@ public class DeterministicKey extends ECKey {
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
     }
 
-    /** Constructs a key from its components. This is not normally something you should use. */
-    public DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
-                            byte[] chainCode,
-                            KeyCrypter crypter,
-                            LazyECPoint pub,
-                            EncryptedData priv,
-                            @Nullable DeterministicKey parent) {
-        this(childNumberPath, chainCode, pub, null, parent);
-        this.encryptedPrivateKey = checkNotNull(priv);
-        this.keyCrypter = checkNotNull(crypter);
-    }
-
     /**
      * Return the fingerprint of this key's parent as an int value, or zero if this key is the
      * root node of the key hierarchy.  Raise an exception if the arguments are inconsistent.
@@ -173,14 +160,13 @@ public class DeterministicKey extends ECKey {
         this.parent = newParent;
         this.childNumberPath = keyToClone.childNumberPath;
         this.chainCode = keyToClone.chainCode;
-        this.encryptedPrivateKey = keyToClone.encryptedPrivateKey;
         this.depth = this.childNumberPath.size();
         this.parentFingerprint = this.parent.getFingerprint();
     }
 
     /**
      * Returns the path through some {@link DeterministicHierarchy} which reaches this keys position in the tree.
-     * A path can be written as 0/1/0 which means the first child of the root, the second child of that node, then
+     * A path can be written as 1/2/1 which means the first child of the root, the second child of that node, then
      * the first child of that node.
      */
     public ImmutableList<ChildNumber> getPath() {
@@ -289,25 +275,6 @@ public class DeterministicKey extends ECKey {
         return checksummed;
     }
 
-    @Override
-    public DeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
-        throw new UnsupportedOperationException("Must supply a new parent for encryption");
-    }
-
-    public DeterministicKey encrypt(KeyCrypter keyCrypter, KeyParameter aesKey, @Nullable DeterministicKey newParent) throws KeyCrypterException {
-        // Same as the parent code, except we construct a DeterministicKey instead of an ECKey.
-        checkNotNull(keyCrypter);
-        if (newParent != null)
-            checkArgument(newParent.isEncrypted());
-        final byte[] privKeyBytes = getPrivKeyBytes();
-        checkState(privKeyBytes != null, "Private key is not available");
-        EncryptedData encryptedPrivateKey = keyCrypter.encrypt(privKeyBytes, aesKey);
-        DeterministicKey key = new DeterministicKey(childNumberPath, chainCode, keyCrypter, pub, encryptedPrivateKey, newParent);
-        if (newParent == null)
-            key.setCreationTimeSeconds(getCreationTimeSeconds());
-        return key;
-    }
-
     /**
      * A deterministic key is considered to be 'public key only' if it hasn't got a private key part and it cannot be
      * rederived. If the hierarchy is encrypted this returns true.
@@ -317,101 +284,10 @@ public class DeterministicKey extends ECKey {
         return super.isPubKeyOnly() && (parent == null || parent.isPubKeyOnly());
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean hasPrivKey() {
         return findParentWithPrivKey() != null;
-    }
-
-    @Nullable
-    @Override
-    public byte[] getSecretBytes() {
-        return priv != null ? getPrivKeyBytes() : null;
-    }
-
-    /**
-     * A deterministic key is considered to be encrypted if it has access to encrypted private key bytes, OR if its
-     * parent does. The reason is because the parent would be encrypted under the same key and this key knows how to
-     * rederive its own private key bytes from the parent, if needed.
-     */
-    @Override
-    public boolean isEncrypted() {
-        return priv == null && (super.isEncrypted() || (parent != null && parent.isEncrypted()));
-    }
-
-    /**
-     * Returns this keys {@link KeyCrypter} <b>or</b> the keycrypter of its parent key.
-     */
-    @Override @Nullable
-    public KeyCrypter getKeyCrypter() {
-        if (keyCrypter != null)
-            return keyCrypter;
-        else if (parent != null)
-            return parent.getKeyCrypter();
-        else
-            return null;
-    }
-
-    @Override
-    public ECDSASignature sign(Sha256Hash input, @Nullable KeyParameter aesKey) throws KeyCrypterException {
-        if (isEncrypted()) {
-            // If the key is encrypted, ECKey.sign will decrypt it first before rerunning sign. Decryption walks the
-            // key hierarchy to find the private key (see below), so, we can just run the inherited method.
-            return super.sign(input, aesKey);
-        } else {
-            // If it's not encrypted, derive the private via the parents.
-            final BigInteger privateKey = findOrDerivePrivateKey();
-            if (privateKey == null) {
-                // This key is a part of a public-key only hierarchy and cannot be used for signing
-                throw new MissingPrivateKeyException();
-            }
-            return super.doSign(input, privateKey);
-        }
-    }
-
-    @Override
-    public DeterministicKey decrypt(KeyCrypter keyCrypter, KeyParameter aesKey) throws KeyCrypterException {
-        checkNotNull(keyCrypter);
-        // Check that the keyCrypter matches the one used to encrypt the keys, if set.
-        if (this.keyCrypter != null && !this.keyCrypter.equals(keyCrypter))
-            throw new KeyCrypterException("The keyCrypter being used to decrypt the key is different to the one that was used to encrypt it");
-        BigInteger privKey = findOrDeriveEncryptedPrivateKey(keyCrypter, aesKey);
-        DeterministicKey key = new DeterministicKey(childNumberPath, chainCode, privKey, parent);
-        if (!Arrays.equals(key.getPubKey(), getPubKey()))
-            throw new KeyCrypterException.PublicPrivateMismatch("Provided AES key is wrong");
-        if (parent == null)
-            key.setCreationTimeSeconds(getCreationTimeSeconds());
-        return key;
-    }
-
-    @Override
-    public DeterministicKey decrypt(KeyParameter aesKey) throws KeyCrypterException {
-        return (DeterministicKey) super.decrypt(aesKey);
-    }
-
-    // For when a key is encrypted, either decrypt our encrypted private key bytes, or work up the tree asking parents
-    // to decrypt and re-derive.
-    private BigInteger findOrDeriveEncryptedPrivateKey(KeyCrypter keyCrypter, KeyParameter aesKey) {
-        if (encryptedPrivateKey != null) {
-            byte[] decryptedKey = keyCrypter.decrypt(encryptedPrivateKey, aesKey);
-            if (decryptedKey.length != 32)
-                throw new KeyCrypterException.InvalidCipherText(
-                        "Decrypted key must be 32 bytes long, but is " + decryptedKey.length);
-            return new BigInteger(1, decryptedKey);
-        }
-        // Otherwise we don't have it, but maybe we can figure it out from our parents. Walk up the tree looking for
-        // the first key that has some encrypted private key data.
-        DeterministicKey cursor = parent;
-        while (cursor != null) {
-            if (cursor.encryptedPrivateKey != null) break;
-            cursor = cursor.parent;
-        }
-        if (cursor == null)
-            throw new KeyCrypterException("Neither this key nor its parents have an encrypted private key");
-        byte[] parentalPrivateKeyBytes = keyCrypter.decrypt(cursor.encryptedPrivateKey, aesKey);
-        if (parentalPrivateKeyBytes.length != 32)
-            throw new KeyCrypterException.InvalidCipherText(
-                    "Decrypted key must be 32 bytes long, but is " + parentalPrivateKeyBytes.length);
-        return derivePrivateKeyDownwards(cursor, parentalPrivateKeyBytes);
     }
 
     private DeterministicKey findParentWithPrivKey() {
@@ -444,14 +320,14 @@ public class DeterministicKey extends ECKey {
         // If it's not, it means we tried decrypting with an invalid password and earlier checks e.g. for padding didn't
         // catch it.
         if (!downCursor.pub.equals(pub))
-            throw new KeyCrypterException.PublicPrivateMismatch("Could not decrypt bytes");
+            throw new KeyCrypterException("Could not decrypt bytes");
         return checkNotNull(downCursor.priv);
     }
 
     /**
-     * Derives a child at the given index using hardened derivation.  Note: {@code index} is
+     * Derives a child at the given index using hardened derivation.  Note: <code>index</code> is
      * not the "i" value.  If you want the softened derivation, then use instead
-     * {@code HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, false))}.
+     * <code>HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, false))</code>.
      */
     public DeterministicKey derive(int child) {
         return HDKeyDerivation.deriveChildKey(this, new ChildNumber(child, true));
@@ -469,24 +345,17 @@ public class DeterministicKey extends ECKey {
         return key;
     }
 
-    @Deprecated
     public byte[] serializePublic(NetworkParameters params) {
-        return serialize(params, true, Script.ScriptType.P2PKH);
+        return serialize(params, true);
     }
 
-    @Deprecated
     public byte[] serializePrivate(NetworkParameters params) {
-        return serialize(params, false, Script.ScriptType.P2PKH);
+        return serialize(params, false);
     }
 
-    private byte[] serialize(NetworkParameters params, boolean pub, Script.ScriptType outputScriptType) {
+    private byte[] serialize(NetworkParameters params, boolean pub) {
         ByteBuffer ser = ByteBuffer.allocate(78);
-        if (outputScriptType == Script.ScriptType.P2PKH)
-            ser.putInt(pub ? params.getBip32HeaderP2PKHpub() : params.getBip32HeaderP2PKHpriv());
-        else if (outputScriptType == Script.ScriptType.P2WPKH)
-            ser.putInt(pub ? params.getBip32HeaderP2WPKHpub() : params.getBip32HeaderP2WPKHpriv());
-        else
-            throw new IllegalStateException(outputScriptType.toString());
+        ser.putInt(pub ? params.getBip32HeaderPub() : params.getBip32HeaderPriv());
         ser.put((byte) getDepth());
         ser.putInt(getParentFingerprint());
         ser.putInt(getChildNumber().i());
@@ -496,20 +365,12 @@ public class DeterministicKey extends ECKey {
         return ser.array();
     }
 
-    public String serializePubB58(NetworkParameters params, Script.ScriptType outputScriptType) {
-        return toBase58(serialize(params, true, outputScriptType));
-    }
-
-    public String serializePrivB58(NetworkParameters params, Script.ScriptType outputScriptType) {
-        return toBase58(serialize(params, false, outputScriptType));
-    }
-
     public String serializePubB58(NetworkParameters params) {
-        return serializePubB58(params, Script.ScriptType.P2PKH);
+        return toBase58(serialize(params, true));
     }
 
     public String serializePrivB58(NetworkParameters params) {
-        return serializePrivB58(params, Script.ScriptType.P2PKH);
+        return toBase58(serialize(params, false));
     }
 
     static String toBase58(byte[] ser) {
@@ -544,10 +405,9 @@ public class DeterministicKey extends ECKey {
     public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, @Nullable DeterministicKey parent) {
         ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
         int header = buffer.getInt();
-        final boolean pub = header == params.getBip32HeaderP2PKHpub() || header == params.getBip32HeaderP2WPKHpub();
-        final boolean priv = header == params.getBip32HeaderP2PKHpriv() || header == params.getBip32HeaderP2WPKHpriv();
-        if (!(pub || priv))
+        if (header != params.getBip32HeaderPriv() && header != params.getBip32HeaderPub())
             throw new IllegalArgumentException("Unknown header bytes: " + toBase58(serializedKey).substring(0, 4));
+        boolean pub = header == params.getBip32HeaderPub();
         int depth = buffer.get() & 0xFF; // convert signed byte to positive int since depth cannot be negative
         final int parentFingerprint = buffer.getInt();
         final int i = buffer.getInt();
@@ -580,18 +440,6 @@ public class DeterministicKey extends ECKey {
         } else {
             return new DeterministicKey(path, chainCode, new BigInteger(1, data), parent, depth, parentFingerprint);
         }
-    }
-
-    /**
-     * The creation time of a deterministic key is equal to that of its parent, unless this key is the root of a tree
-     * in which case the time is stored alongside the key as per normal, see {@link ECKey#getCreationTimeSeconds()}.
-     */
-    @Override
-    public long getCreationTimeSeconds() {
-        if (parent != null)
-            return parent.getCreationTimeSeconds();
-        else
-            return super.getCreationTimeSeconds();
     }
 
     /**
@@ -633,22 +481,15 @@ public class DeterministicKey extends ECKey {
         helper.add("path", getPathAsString());
         if (creationTimeSeconds > 0)
             helper.add("creationTimeSeconds", creationTimeSeconds);
-        helper.add("isEncrypted", isEncrypted());
         helper.add("isPubKeyOnly", isPubKeyOnly());
         return helper.toString();
     }
 
-    @Override
-    public void formatKeyWithAddress(boolean includePrivateKeys, @Nullable KeyParameter aesKey, StringBuilder builder,
-            NetworkParameters params, Script.ScriptType outputScriptType, @Nullable String comment) {
-        builder.append("  addr:").append(Address.fromKey(params, this, outputScriptType).toString());
+    public void formatKeyWithAddress(StringBuilder builder,
+            NetworkParameters params) {
+        final Address address = toAddress(params);
+        builder.append("  addr:").append(address);
         builder.append("  hash160:").append(Utils.HEX.encode(getPubKeyHash()));
-        builder.append("  (").append(getPathAsString());
-        if (comment != null)
-            builder.append(", ").append(comment);
-        builder.append(")\n");
-        if (includePrivateKeys) {
-            builder.append("  ").append(toStringWithPrivate(aesKey, params)).append("\n");
-        }
+        builder.append("  (").append(getPathAsString()).append(")\n");
     }
 }

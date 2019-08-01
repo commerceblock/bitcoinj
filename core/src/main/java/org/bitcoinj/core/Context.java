@@ -16,7 +16,6 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.wallet.SendRequest;
 import org.slf4j.*;
 
@@ -24,7 +23,6 @@ import static com.google.common.base.Preconditions.*;
 
 // TODO: Finish adding Context c'tors to all the different objects so we can start deprecating the versions that take NetworkParameters.
 // TODO: Add a working directory notion to Context and make various subsystems that want to use files default to that directory (eg. Orchid, block stores, wallet, etc).
-// TODO: Auto-register the block chain object here, and then use it in the (newly deprecated) TransactionConfidence.getDepthInBlocks() method: the new version should take an AbstractBlockChain specifically.
 //       Also use the block chain object reference from the context in PeerGroup and remove the other constructors, as it's easy to forget to wire things up.
 // TODO: Move Threading.USER_THREAD to here and leave behind just a source code stub. Allow different instantiations of the library to use different user threads.
 // TODO: Keep a URI to where library internal data files can be found, to abstract over the lack of JAR files on Android.
@@ -66,7 +64,7 @@ public class Context {
      * Creates a new custom context object. This is mainly meant for unit tests for now.
      *
      * @param params The network parameters that will be associated with this context.
-     * @param eventHorizon Number of blocks after which the library will delete data and be unable to always process reorgs. See {@link #getEventHorizon()}.
+     * @param eventHorizon Number of blocks after which the library will delete data and be unable to always process reorgs (see {@link #getEventHorizon()}.
      * @param feePerKb The default fee per 1000 bytes of transaction data to pay when completing transactions. For details, see {@link SendRequest#feePerKb}.
      * @param ensureMinRequiredFee Whether to ensure the minimum required fee by default when completing transactions. For details, see {@link SendRequest#ensureMinRequiredFee}.
      */
@@ -120,7 +118,7 @@ public class Context {
     }
 
     /**
-     * Require that new threads use {@link #propagate(Context)} or {@link ContextPropagatingThreadFactory},
+     * Require that new threads use {@link #propagate(Context)} or {@link org.bitcoinj.utils.ContextPropagatingThreadFactory},
      * rather than using a heuristic for the desired context.
      */
     public static void enableStrictMode() {
@@ -146,7 +144,7 @@ public class Context {
      * Sets the given context as the current thread context. You should use this if you create your own threads that
      * want to create core BitcoinJ objects. Generally, if a class can accept a Context in its constructor and might
      * be used (even indirectly) by a thread, you will want to call this first. Your task may be simplified by using
-     * a {@link ContextPropagatingThreadFactory}.
+     * a {@link org.bitcoinj.utils.ContextPropagatingThreadFactory}.
      */
     public static void propagate(Context context) {
         slot.set(checkNotNull(context));
@@ -163,7 +161,7 @@ public class Context {
     }
 
     /**
-     * Returns the {@link NetworkParameters} specified when this context was (auto) created. The
+     * Returns the {@link org.bitcoinj.core.NetworkParameters} specified when this context was (auto) created. The
      * network parameters defines various hard coded constants for a specific instance of a Bitcoin network, such as
      * main net, testnet, etc.
      */

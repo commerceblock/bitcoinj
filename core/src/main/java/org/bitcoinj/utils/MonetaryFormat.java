@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Monetary;
@@ -46,6 +45,8 @@ import org.bitcoinj.core.Monetary;
  */
 public final class MonetaryFormat {
 
+    // TODO: 14/12/2017 Add BCH
+
     /** Standard format for the BTC denomination. */
     public static final MonetaryFormat BTC = new MonetaryFormat().shift(0).minDecimals(2).repeatOptionalDecimals(2, 3);
     /** Standard format for the mBTC denomination. */
@@ -60,12 +61,6 @@ public final class MonetaryFormat {
     public static final String CODE_MBTC = "mBTC";
     /** Currency code for base 1/1000000 Bitcoin. */
     public static final String CODE_UBTC = "µBTC";
-    /** Currency symbol for base 1 Bitcoin. */
-    public static final String SYMBOL_BTC = "\u20bf";
-    /** Currency symbol for base 1/1000 Bitcoin. */
-    public static final String SYMBOL_MBTC = "m" + SYMBOL_BTC;
-    /** Currency symbol for base 1/1000000 Bitcoin. */
-    public static final String SYMBOL_UBTC = "µ" + SYMBOL_BTC;
 
     public static final int MAX_DECIMALS = 8;
 
@@ -156,7 +151,7 @@ public final class MonetaryFormat {
      * </p>
      * 
      * <p>
-     * For example, if you pass {@code 4,2} it will add four decimals to your formatted string if needed, and then add
+     * For example, if you pass <tt>4,2</tt> it will add four decimals to your formatted string if needed, and then add
      * another two decimals if needed. At this point, rather than adding further decimals the value will be rounded.
      * </p>
      * 
@@ -179,7 +174,7 @@ public final class MonetaryFormat {
      * </p>
      * 
      * <p>
-     * For example, if you pass {@code 1,8} it will up to eight decimals to your formatted string if needed. After
+     * For example, if you pass <tt>1,8</tt> it will up to eight decimals to your formatted string if needed. After
      * these have been used up, rather than adding further decimals the value will be rounded.
      * </p>
      * 
@@ -298,10 +293,6 @@ public final class MonetaryFormat {
     }
 
     public MonetaryFormat() {
-        this(false);
-    }
-
-    public MonetaryFormat(boolean useBitcoinSymbol) {
         // defaults
         this.negativeSign = '-';
         this.positiveSign = 0; // none
@@ -312,9 +303,9 @@ public final class MonetaryFormat {
         this.shift = 0;
         this.roundingMode = RoundingMode.HALF_UP;
         this.codes = new String[MAX_DECIMALS];
-        this.codes[0] = useBitcoinSymbol ? SYMBOL_BTC : CODE_BTC;
-        this.codes[3] = useBitcoinSymbol ? SYMBOL_MBTC : CODE_MBTC;
-        this.codes[6] = useBitcoinSymbol ? SYMBOL_UBTC : CODE_UBTC;
+        this.codes[0] = CODE_BTC;
+        this.codes[3] = CODE_MBTC;
+        this.codes[6] = CODE_UBTC;
         this.codeSeparator = ' ';
         this.codePrefixed = true;
     }
@@ -404,7 +395,7 @@ public final class MonetaryFormat {
     }
 
     /**
-     * Parse a human readable coin value to a {@link Coin} instance.
+     * Parse a human readable coin value to a {@link org.bitcoinj.core.Coin} instance.
      * 
      * @throws NumberFormatException
      *             if the string cannot be parsed for some reason
@@ -414,7 +405,7 @@ public final class MonetaryFormat {
     }
 
     /**
-     * Parse a human readable fiat value to a {@link Fiat} instance.
+     * Parse a human readable fiat value to a {@link org.bitcoinj.utils.Fiat} instance.
      * 
      * @throws NumberFormatException
      *             if the string cannot be parsed for some reason
@@ -461,46 +452,5 @@ public final class MonetaryFormat {
         if (codes[shift] == null)
             throw new NumberFormatException("missing code for shift: " + shift);
         return codes[shift];
-    }
-
-    /**
-     * Two formats are equal if they have the same parameters.
-     */
-    @Override
-    public boolean equals(final Object o) {
-        if (o == this)
-            return true;
-        if (o == null || o.getClass() != getClass())
-            return false;
-        final MonetaryFormat other = (MonetaryFormat) o;
-        if (!Objects.equals(this.negativeSign, other.negativeSign))
-            return false;
-        if (!Objects.equals(this.positiveSign, other.positiveSign))
-            return false;
-        if (!Objects.equals(this.zeroDigit, other.zeroDigit))
-            return false;
-        if (!Objects.equals(this.decimalMark, other.decimalMark))
-            return false;
-        if (!Objects.equals(this.minDecimals, other.minDecimals))
-            return false;
-        if (!Objects.equals(this.decimalGroups, other.decimalGroups))
-            return false;
-        if (!Objects.equals(this.shift, other.shift))
-            return false;
-        if (!Objects.equals(this.roundingMode, other.roundingMode))
-            return false;
-        if (!Arrays.equals(this.codes, other.codes))
-            return false;
-        if (!Objects.equals(this.codeSeparator, other.codeSeparator))
-            return false;
-        if (!Objects.equals(this.codePrefixed, other.codePrefixed))
-            return false;
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(negativeSign, positiveSign, zeroDigit, decimalMark, minDecimals, decimalGroups, shift,
-                roundingMode, Arrays.hashCode(codes), codeSeparator, codePrefixed);
     }
 }

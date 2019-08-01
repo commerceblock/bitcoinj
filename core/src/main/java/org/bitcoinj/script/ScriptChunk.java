@@ -21,8 +21,6 @@ import org.bitcoinj.core.Utils;
 import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
@@ -44,11 +42,11 @@ public class ScriptChunk {
     public final byte[] data;
     private int startLocationInProgram;
 
-    public ScriptChunk(int opcode, @Nullable byte[] data) {
+    public ScriptChunk(int opcode, byte[] data) {
         this(opcode, data, -1);
     }
 
-    public ScriptChunk(int opcode, @Nullable byte[] data, int startLocationInProgram) {
+    public ScriptChunk(int opcode, byte[] data, int startLocationInProgram) {
         this.opcode = opcode;
         this.data = data;
         this.startLocationInProgram = startLocationInProgram;
@@ -125,7 +123,8 @@ public class ScriptChunk {
             } else if (opcode == OP_PUSHDATA2) {
                 checkState(data.length <= 0xFFFF);
                 stream.write(OP_PUSHDATA2);
-                Utils.uint16ToByteStreamLE(data.length, stream);
+                stream.write(0xFF & data.length);
+                stream.write(0xFF & (data.length >> 8));
             } else if (opcode == OP_PUSHDATA4) {
                 checkState(data.length <= Script.MAX_SCRIPT_ELEMENT_SIZE);
                 stream.write(OP_PUSHDATA4);
@@ -137,17 +136,6 @@ public class ScriptChunk {
         } else {
             stream.write(opcode); // smallNum
         }
-    }
-
-    public byte[] toByteArray() {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        try {
-            write(stream);
-        } catch (IOException e) {
-            // Should not happen as ByteArrayOutputStream does not throw IOException on write
-            throw new RuntimeException(e);
-        }
-        return stream.toByteArray();
     }
 
     @Override

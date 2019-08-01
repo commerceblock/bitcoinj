@@ -16,22 +16,26 @@
 
 package org.bitcoinj.params;
 
-import org.bitcoinj.core.NetworkParameters;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-
 import java.util.Collection;
 import java.util.Set;
+import org.bitcoinj.core.NetworkParameters;
 
 /**
- * Utility class that holds all the registered NetworkParameters types used for address auto discovery.
- * By default only MainNetParams and TestNet3Params are used. If you want to use RegTestParams or
- * UnitTestParams use the register and unregister the TestNet3Params as they don't have their own address
+ * Utility class that holds all the registered NetworkParameters types used for Address auto discovery.
+ * By default only MainBtcNetParams and TestBtcNet3Params are used. If you want to use TestNet2, RegBtcTestParams or
+ * UnitTestParams use the register and unregister the TestBtcNet3Params as they don't have their own address
  * version/type code.
  */
 public class Networks {
     /** Registered networks */
-    private static Set<? extends NetworkParameters> networks = ImmutableSet.of(TestNet3Params.get(), MainNetParams.get());
+    private static Set<? extends NetworkParameters> networks = ImmutableSet.of(
+        BitcoinTestNet3Params.get(),
+        BitcoinMainNetParams.get(),
+        BitcoinCashTestNet3Params.get(),
+        BitcoinCashMainNetParams.get()
+    );
 
     public static Set<? extends NetworkParameters> get() {
         return networks;

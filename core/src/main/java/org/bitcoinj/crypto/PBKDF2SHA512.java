@@ -25,11 +25,9 @@ package org.bitcoinj.crypto;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * <p>This is a clean-room implementation of PBKDF2 using RFC 2898 as a reference.</p>
@@ -73,13 +71,13 @@ public class PBKDF2SHA512 {
         byte[] U_LAST = null;
         byte[] U_XOR = null;
 
-        SecretKeySpec key = new SecretKeySpec(P.getBytes(StandardCharsets.UTF_8), "HmacSHA512");
+        SecretKeySpec key = new SecretKeySpec(P.getBytes("UTF-8"), "HmacSHA512");
         Mac mac = Mac.getInstance(key.getAlgorithm());
         mac.init(key);
 
         for (int j = 0; j < c; j++) {
             if (j == 0) {
-                byte[] baS = S.getBytes(StandardCharsets.UTF_8);
+                byte[] baS = S.getBytes("UTF-8");
                 byte[] baI = INT(i);
                 byte[] baU = new byte[baS.length + baI.length];
 

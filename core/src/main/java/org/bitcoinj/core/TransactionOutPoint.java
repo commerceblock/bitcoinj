@@ -50,7 +50,7 @@ public class TransactionOutPoint extends ChildMessage {
         super(params);
         this.index = index;
         if (fromTx != null) {
-            this.hash = fromTx.getTxId();
+            this.hash = fromTx.getHash();
             this.fromTx = fromTx;
         } else {
             // This happens when constructing the genesis block.
@@ -129,8 +129,8 @@ public class TransactionOutPoint extends ChildMessage {
     }
 
     /**
-     * Returns the ECKey identified in the connected output, for either P2PKH, P2WPKH or P2PK scripts.
-     * For P2SH scripts you can use {@link #getConnectedRedeemData(KeyBag)} and then get the
+     * Returns the ECKey identified in the connected output, for either pay-to-address scripts or pay-to-key scripts.
+     * For P2SH scripts you can use {@link #getConnectedRedeemData(org.bitcoinj.wallet.KeyBag)} and then get the
      * key from RedeemData.
      * If the script form cannot be understood, throws ScriptException.
      *
@@ -141,14 +141,11 @@ public class TransactionOutPoint extends ChildMessage {
         TransactionOutput connectedOutput = getConnectedOutput();
         checkNotNull(connectedOutput, "Input is not connected so cannot retrieve key");
         Script connectedScript = connectedOutput.getScriptPubKey();
-        if (ScriptPattern.isP2PKH(connectedScript)) {
-            byte[] addressBytes = ScriptPattern.extractHashFromP2PKH(connectedScript);
-            return keyBag.findKeyFromPubKeyHash(addressBytes, Script.ScriptType.P2PKH);
-        } else if (ScriptPattern.isP2WPKH(connectedScript)) {
-            byte[] addressBytes = ScriptPattern.extractHashFromP2WH(connectedScript);
-            return keyBag.findKeyFromPubKeyHash(addressBytes, Script.ScriptType.P2WPKH);
-        } else if (ScriptPattern.isP2PK(connectedScript)) {
-            byte[] pubkeyBytes = ScriptPattern.extractKeyFromP2PK(connectedScript);
+        if (connectedScript.isSentToAddress()) {
+            byte[] addressBytes = connectedScript.getPubKeyHash();
+            return keyBag.findKeyFromPubHash(addressBytes);
+        } else if (connectedScript.isSentToRawPubKey()) {
+            byte[] pubkeyBytes = connectedScript.getPubKey();
             return keyBag.findKeyFromPubKey(pubkeyBytes);
         } else {
             throw new ScriptException(ScriptError.SCRIPT_ERR_UNKNOWN_ERROR, "Could not understand form of connected output script: " + connectedScript);
@@ -156,7 +153,7 @@ public class TransactionOutPoint extends ChildMessage {
     }
 
     /**
-     * Returns the RedeemData identified in the connected output, for either P2PKH, P2WPKH, P2PK
+     * Returns the RedeemData identified in the connected output, for either pay-to-address scripts, pay-to-key
      * or P2SH scripts.
      * If the script forms cannot be understood, throws ScriptException.
      *
@@ -167,17 +164,14 @@ public class TransactionOutPoint extends ChildMessage {
         TransactionOutput connectedOutput = getConnectedOutput();
         checkNotNull(connectedOutput, "Input is not connected so cannot retrieve key");
         Script connectedScript = connectedOutput.getScriptPubKey();
-        if (ScriptPattern.isP2PKH(connectedScript)) {
-            byte[] addressBytes = ScriptPattern.extractHashFromP2PKH(connectedScript);
-            return RedeemData.of(keyBag.findKeyFromPubKeyHash(addressBytes, Script.ScriptType.P2PKH), connectedScript);
-        } else if (ScriptPattern.isP2WPKH(connectedScript)) {
-            byte[] addressBytes = ScriptPattern.extractHashFromP2WH(connectedScript);
-            return RedeemData.of(keyBag.findKeyFromPubKeyHash(addressBytes, Script.ScriptType.P2WPKH), connectedScript);
-        } else if (ScriptPattern.isP2PK(connectedScript)) {
-            byte[] pubkeyBytes = ScriptPattern.extractKeyFromP2PK(connectedScript);
+        if (connectedScript.isSentToAddress()) {
+            byte[] addressBytes = connectedScript.getPubKeyHash();
+            return RedeemData.of(keyBag.findKeyFromPubHash(addressBytes), connectedScript);
+        } else if (connectedScript.isSentToRawPubKey()) {
+            byte[] pubkeyBytes = connectedScript.getPubKey();
             return RedeemData.of(keyBag.findKeyFromPubKey(pubkeyBytes), connectedScript);
-        } else if (ScriptPattern.isP2SH(connectedScript)) {
-            byte[] scriptHash = ScriptPattern.extractHashFromP2SH(connectedScript);
+        } else if (connectedScript.isPayToScriptHash()) {
+            byte[] scriptHash = connectedScript.getPubKeyHash();
             return keyBag.findRedeemDataFromScriptHash(scriptHash);
         } else {
             throw new ScriptException(ScriptError.SCRIPT_ERR_UNKNOWN_ERROR, "Could not understand form of connected output script: " + connectedScript);

@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -41,21 +40,6 @@ public abstract class Message {
 
     public static final int UNKNOWN_LENGTH = Integer.MIN_VALUE;
 
-    // Length of some output field parameters in ocean (nonce, asset, value)
-    public static final int CONFIDENTIAL_COMMITMENT = 33;
-
-    // Potential length of value field (output) in ocean
-    public static final int CONFIDENTIAL_VALUE = 9;
-
-    // A number used for bitwise AND operation on outpoint index to find if the input has issuance.
-    public static final long OUTPOINT_ISSUANCE_FLAG = (1 << 31) >>> 0;
-    // A number used for bitwise AND operation on outpoint index to find if the input is pegin.
-    public static final long OUTPOINT_PEGIN_FLAG = (1 << 30) >>> 0;
-    // A number used for bitwise AND operation on outpoint index to turn the last 2 bits to 0's.
-    public static final long OUTPOINT_INDEX_MASK = 0x3fffffff;
-    // Used for ocean to determine if mask needs to be applied and flags should be checked.
-    public static final long MINUS_1 = 4294967295L;
-
     // Useful to ensure serialize/deserialize are consistent with each other.
     private static final boolean SELF_CHECK = false;
 
@@ -66,9 +50,6 @@ public abstract class Message {
     protected int cursor;
 
     protected int length = UNKNOWN_LENGTH;
-
-    // A flag used to determine if the full payload read is necessary (e.g. headers only block)
-    protected boolean readIncomplete = false;
 
     // The raw message payload bytes themselves.
     protected byte[] payload;
@@ -86,8 +67,7 @@ public abstract class Message {
 
     protected Message(NetworkParameters params) {
         this.params = params;
-        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
-        this.serializer = params.getDefaultSerializer();
+        serializer = params.getDefaultSerializer();
     }
 
     protected Message(NetworkParameters params, byte[] payload, int offset, int protocolVersion) throws ProtocolException {
@@ -106,16 +86,25 @@ public abstract class Message {
      * @throws ProtocolException
      */
     protected Message(NetworkParameters params, byte[] payload, int offset, int protocolVersion, MessageSerializer serializer, int length) throws ProtocolException {
-        initializeConstructor(params, payload, offset, protocolVersion, serializer, length);
-    }
+        this.serializer = serializer;
+        this.protocolVersion = protocolVersion;
+        this.params = params;
+        this.payload = payload;
+        this.cursor = this.offset = offset;
+        this.length = length;
 
-    /* Same as above but is passed an extra param which indicates that not all of the payload is necessary. 
-     * For example only the header should be read from a full block payload where the header is of variable size.
-     */
-    protected Message(NetworkParameters params, byte[] payload, int offset, int protocolVersion, MessageSerializer serializer, int length,
-        boolean readIncomplete) throws ProtocolException {
-        this.readIncomplete = readIncomplete;
-        initializeConstructor(params, payload, offset, protocolVersion, serializer, length);
+        parse();
+
+        if (this.length == UNKNOWN_LENGTH)
+            checkState(false, "Length field has not been set in constructor for %s after parse.",
+                       getClass().getSimpleName());
+        
+        if (SELF_CHECK) {
+            selfCheck(payload, offset);
+        }
+        
+        if (!serializer.isParseRetainMode())
+            this.payload = null;
     }
 
     private void selfCheck(byte[] payload, int offset) {
@@ -140,40 +129,13 @@ public abstract class Message {
              serializer, length);
     }
 
-    protected Message(NetworkParameters params, byte[] payload, int offset, MessageSerializer serializer, int length, boolean readIncomplete) throws ProtocolException {
-        this(params, payload, offset, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT),
-             serializer, length, readIncomplete);
-    }
-
-    protected void initializeConstructor(NetworkParameters params, byte[] payload, int offset, int protocolVersion, MessageSerializer serializer, int length) throws ProtocolException {
-        this.serializer = serializer;
-        this.protocolVersion = protocolVersion;
-        this.params = params;
-        this.payload = payload;
-        this.cursor = this.offset = offset;
-        this.length = length;
-
-        parse();
-
-        if (this.length == UNKNOWN_LENGTH)
-            checkState(false, "Length field has not been set in constructor for %s after parse.",
-                       getClass().getSimpleName());
-        
-        if (SELF_CHECK) {
-            selfCheck(payload, offset);
-        }
-        
-        if (!serializer.isParseRetainMode())
-            this.payload = null;
-    }
-
     // These methods handle the serialization/deserialization using the custom Bitcoin protocol.
 
     protected abstract void parse() throws ProtocolException;
 
     /**
      * <p>To be called before any change of internal values including any setters. This ensures any cached byte array is
-     * removed.</p>
+     * removed.<p/>
      * <p>Child messages of this object(e.g. Transactions belonging to a Block) will not have their internal byte caches
      * invalidated unless they are also modified internally.</p>
      */
@@ -223,20 +185,19 @@ public abstract class Message {
     }
 
     /**
-     * <p>Serialize this message to a byte array that conforms to the bitcoin wire protocol.</p>
-     *
-     * <p>This method may return the original byte array used to construct this message if the
-     * following conditions are met:</p>
-     *
+     * Serialize this message to a byte array that conforms to the bitcoin wire protocol.
+     * <br/>
+     * This method may return the original byte array used to construct this message if the
+     * following conditions are met:
      * <ol>
      * <li>1) The message was parsed from a byte array with parseRetain = true</li>
      * <li>2) The message has not been modified</li>
      * <li>3) The array had an offset of 0 and no surplus bytes</li>
      * </ol>
      *
-     * <p>If condition 3 is not met then an copy of the relevant portion of the array will be returned.
+     * If condition 3 is not met then an copy of the relevant portion of the array will be returned.
      * Otherwise a full serialize will occur. For this reason you should only use this API if you can guarantee you
-     * will treat the resulting array as read only.</p>
+     * will treat the resulting array as read only.
      *
      * @return a byte array owned by this object, do NOT mutate it.
      */
@@ -366,7 +327,7 @@ public abstract class Message {
     }
 
     protected byte[] readBytes(int length) throws ProtocolException {
-        if ((length > MAX_SIZE) || (cursor + length > payload.length)) {
+        if (length > MAX_SIZE) {
             throw new ProtocolException("Claimed value length too large: " + length);
         }
         try {
@@ -386,73 +347,13 @@ public abstract class Message {
 
     protected String readStr() throws ProtocolException {
         long length = readVarInt();
-        return length == 0 ? "" : new String(readBytes((int) length), StandardCharsets.UTF_8); // optimization for empty strings
+        return length == 0 ? "" : Utils.toString(readBytes((int) length), "UTF-8"); // optimization for empty strings
     }
 
     protected Sha256Hash readHash() throws ProtocolException {
         // We have to flip it around, as it's been read off the wire in little endian.
         // Not the most efficient way to do this but the clearest.
         return Sha256Hash.wrapReversed(readBytes(32));
-    }
-
-        // CConfidentialAsset size 33, prefixA 10, prefixB 11
-    protected byte[] readConfidentialAsset() {
-        byte[] versionByte = readBytes(1);
-        int versionInt = versionByte[0] & 0xFF;
-
-        if (versionInt == 1 || versionInt == 0xff) {
-            return Utils.concatenateArrays(
-                versionByte,
-                readBytes(CONFIDENTIAL_COMMITMENT - 1)
-            );
-        }
-        else if (versionInt == 10 || versionInt == 11) {
-            return Utils.concatenateArrays(
-                versionByte,
-                readBytes(CONFIDENTIAL_COMMITMENT - 1)
-            );
-        }
-        return versionByte;
-    }
-
-    // CConfidentialNonce size 33, prefixA 2, prefixB 3
-    protected byte[] readConfidentialNonce() {
-        byte[] versionByte = readBytes(1);
-        int versionInt = versionByte[0] & 0xFF;
-
-        if (versionInt == 1 || versionInt == 0xff) {
-            return Utils.concatenateArrays(
-                versionByte,
-                readBytes(CONFIDENTIAL_COMMITMENT - 1)
-            );
-        }
-        else if (versionInt == 2 || versionInt == 3) {
-            return Utils.concatenateArrays(
-                versionByte,
-                readBytes(CONFIDENTIAL_COMMITMENT - 1)
-            );
-        }
-        return versionByte;
-    }
-
-    // CConfidentialValue size 9, prefixA 8, prefixB 9
-    protected byte[] readConfidentialValue() {
-        byte[] versionByte = readBytes(1);
-        int versionInt = versionByte[0] & 0xFF;
-
-        if (versionInt == 1 || versionInt == 0xff) {
-            return Utils.concatenateArrays(
-                versionByte,
-                readBytes(CONFIDENTIAL_VALUE - 1)
-            );
-        }
-        else if (versionInt == 8 || versionInt == 9) {
-            return Utils.concatenateArrays(
-                versionByte,
-                readBytes(CONFIDENTIAL_COMMITMENT - 1)
-            );
-        }
-        return versionByte;
     }
 
     protected boolean hasMoreBytes() {
@@ -467,7 +368,7 @@ public abstract class Message {
     /**
      * Set the serializer for this message when deserialized by Java.
      */
-    private void readObject(ObjectInputStream in)
+    private void readObject(java.io.ObjectInputStream in)
         throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         if (null != params) {

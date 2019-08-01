@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.base.MoreObjects;
-
 /**
  * <p>Abstract superclass of classes with list based payload, ie InventoryMessage and GetDataMessage.</p>
  * 
@@ -85,9 +83,24 @@ public abstract class ListMessage extends Message {
                 throw new ProtocolException("Ran off the end of the INV");
             }
             int typeCode = (int) readUint32();
-            InventoryItem.Type type = InventoryItem.Type.ofCode(typeCode);
-            if (type == null)
-                throw new ProtocolException("Unknown CInv type: " + typeCode);
+            InventoryItem.Type type;
+            // See ppszTypeName in net.h
+            switch (typeCode) {
+                case 0:
+                    type = InventoryItem.Type.Error;
+                    break;
+                case 1:
+                    type = InventoryItem.Type.Transaction;
+                    break;
+                case 2:
+                    type = InventoryItem.Type.Block;
+                    break;
+                case 3:
+                    type = InventoryItem.Type.FilteredBlock;
+                    break;
+                default:
+                    throw new ProtocolException("Unknown CInv type: " + typeCode);
+            }
             InventoryItem item = new InventoryItem(type, readHash());
             items.add(item);
         }
@@ -99,7 +112,7 @@ public abstract class ListMessage extends Message {
         stream.write(new VarInt(items.size()).encode());
         for (InventoryItem i : items) {
             // Write out the type code.
-            Utils.uint32ToByteStreamLE(i.type.code, stream);
+            Utils.uint32ToByteStreamLE(i.type.ordinal(), stream);
             // And now the hash.
             stream.write(i.hash.getReversedBytes());
         }
@@ -115,12 +128,5 @@ public abstract class ListMessage extends Message {
     @Override
     public int hashCode() {
         return items.hashCode();
-    }
-
-    @Override
-    public String toString() {
-        MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
-        helper.addValue(items);
-        return helper.toString();
     }
 }

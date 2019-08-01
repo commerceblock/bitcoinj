@@ -25,7 +25,6 @@ import java.util.Date;
 
 import org.bitcoin.protocols.payments.Protos.PaymentDetails;
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.LegacyAddress;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
@@ -36,8 +35,7 @@ import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.utils.ExchangeRate;
 import org.bitcoinj.wallet.KeyChain.KeyPurpose;
-import org.bitcoinj.wallet.Wallet.MissingSigsMode;
-import org.bouncycastle.crypto.params.KeyParameter;
+import org.spongycastle.crypto.params.KeyParameter;
 
 import com.google.common.base.MoreObjects;
 
@@ -66,7 +64,7 @@ public class SendRequest {
 
     /**
      * When emptyWallet is set, all coins selected by the coin selector are sent to the first output in tx
-     * (its value is ignored and set to {@link Wallet#getBalance()} - the fees required
+     * (its value is ignored and set to {@link org.bitcoinj.wallet.Wallet#getBalance()} - the fees required
      * for the transaction). Any additional outputs are removed.
      */
     public boolean emptyWallet = false;
@@ -116,7 +114,7 @@ public class SendRequest {
     public KeyParameter aesKey = null;
 
     /**
-     * If not null, the {@link CoinSelector} to use instead of the wallets default. Coin selectors are
+     * If not null, the {@link org.bitcoinj.wallet.CoinSelector} to use instead of the wallets default. Coin selectors are
      * responsible for choosing which transaction outputs (coins) in a wallet to use given the desired send value
      * amount.
      */
@@ -128,13 +126,6 @@ public class SendRequest {
      * so it can be disabled here.
      */
     public boolean shuffleOutputs = true;
-
-    /**
-     * Specifies what to do with missing signatures left after completing this request. Default strategy is to
-     * throw an exception on missing signature ({@link MissingSigsMode#THROW}).
-     * @see MissingSigsMode
-     */
-    public MissingSigsMode missingSigsMode = MissingSigsMode.THROW;
 
     /**
      * If not null, this exchange rate is recorded with the transaction during completion.
@@ -202,32 +193,6 @@ public class SendRequest {
         req.tx = new Transaction(parameters);
         req.tx.addOutput(Coin.ZERO, destination);
         req.emptyWallet = true;
-        return req;
-    }
-
-    /**
-     * Construct a SendRequest for a CPFP (child-pays-for-parent) transaction. The resulting transaction is already
-     * completed, so you should directly proceed to signing and broadcasting/committing the transaction. CPFP is
-     * currently only supported by a few miners, so use with care.
-     */
-    public static SendRequest childPaysForParent(Wallet wallet, Transaction parentTransaction, Coin feeRaise) {
-        TransactionOutput outputToSpend = null;
-        for (final TransactionOutput output : parentTransaction.getOutputs()) {
-            if (output.isMine(wallet) && output.isAvailableForSpending()
-                    && output.getValue().isGreaterThan(feeRaise)) {
-                outputToSpend = output;
-                break;
-            }
-        }
-        // TODO spend another confirmed output of own wallet if needed
-        checkNotNull(outputToSpend, "Can't find adequately sized output that spends to us");
-
-        final Transaction tx = new Transaction(parentTransaction.getParams());
-        tx.addInput(outputToSpend);
-        tx.addOutput(outputToSpend.getValue().subtract(feeRaise), wallet.freshAddress(KeyPurpose.CHANGE));
-        tx.setPurpose(Transaction.Purpose.RAISE_FEE);
-        final SendRequest req = forTx(tx);
-        req.completed = true;
         return req;
     }
 

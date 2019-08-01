@@ -37,7 +37,7 @@ import com.google.common.base.Objects;
  * depth-first traversal is performed, consuming bits and hashes as they were written during encoding.</p>
  *
  * <p>The serialization is fixed and provides a hard guarantee about the encoded size,
- * {@code SIZE <= 10 + ceil(32.25*N)} where N represents the number of leaf nodes of the partial tree. N itself
+ * <tt>SIZE &lt;= 10 + ceil(32.25*N)</tt> where N represents the number of leaf nodes of the partial tree. N itself
  * is bounded by:</p>
  *
  * <p>
@@ -45,16 +45,14 @@ import com.google.common.base.Objects;
  * N &lt;= 1 + matched_transactions*tree_height
  * </p>
  *
- * <p>The serialization format:</p>
- * <pre>
+ * <p><pre>The serialization format:
  *  - uint32     total_transactions (4 bytes)
  *  - varint     number of hashes   (1-3 bytes)
  *  - uint256[]  hashes in depth-first order (&lt;= 32*N bytes)
  *  - varint     number of bytes of flag bits (1-3 bytes)
  *  - byte[]     flag bits, packed per 8 in a byte, least significant bit first (&lt;= 2*N-1 bits)
- * </pre>
- * <p>The size constraints follow from this.</p>
- *
+ * The size constraints follow from this.</pre></p>
+ * 
  * <p>Instances of this class are not safe for use by multiple threads.</p>
  */
 public class PartialMerkleTree extends Message {
@@ -118,7 +116,7 @@ public class PartialMerkleTree extends Message {
         transactionCount = (int)readUint32();
 
         int nHashes = (int) readVarInt();
-        hashes = new ArrayList<>(Math.min(nHashes, Utils.MAX_INITIAL_ARRAY_LENGTH));
+        hashes = new ArrayList<>(nHashes);
         for (int i = 0; i < nHashes; i++)
             hashes.add(readHash());
 
@@ -215,7 +213,9 @@ public class PartialMerkleTree extends Message {
     }
 
     private static Sha256Hash combineLeftRight(byte[] left, byte[] right) {
-        return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(reverseBytes(left), reverseBytes(right)));
+        return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(
+            reverseBytes(left), 0, 32,
+            reverseBytes(right), 0, 32));
     }
 
     /**

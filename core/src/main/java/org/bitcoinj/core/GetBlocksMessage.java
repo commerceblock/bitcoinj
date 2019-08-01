@@ -19,6 +19,8 @@ package org.bitcoinj.core;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * <p>Represents the "getblocks" P2P network message, which requests the hashes of the parts of the block chain we're
@@ -29,10 +31,10 @@ import java.io.OutputStream;
 public class GetBlocksMessage extends Message {
 
     protected long version;
-    protected BlockLocator locator;
+    protected List<Sha256Hash> locator;
     protected Sha256Hash stopHash;
 
-    public GetBlocksMessage(NetworkParameters params, BlockLocator locator, Sha256Hash stopHash) {
+    public GetBlocksMessage(NetworkParameters params, List<Sha256Hash> locator, Sha256Hash stopHash) {
         super(params);
         this.version = protocolVersion;
         this.locator = locator;
@@ -51,14 +53,14 @@ public class GetBlocksMessage extends Message {
         if (startCount > 500)
             throw new ProtocolException("Number of locators cannot be > 500, received: " + startCount);
         length = cursor - offset + ((startCount + 1) * 32);
-        locator = new BlockLocator();
+        locator = new ArrayList<>(startCount);
         for (int i = 0; i < startCount; i++) {
-            locator = locator.add(readHash());
+            locator.add(readHash());
         }
         stopHash = readHash();
     }
 
-    public BlockLocator getLocator() {
+    public List<Sha256Hash> getLocator() {
         return locator;
     }
 
@@ -68,7 +70,7 @@ public class GetBlocksMessage extends Message {
 
     @Override
     public String toString() {
-        return "getblocks: " + locator.toString();
+        return "getblocks: " + Utils.SPACE_JOINER.join(locator);
     }
 
     @Override
@@ -79,7 +81,7 @@ public class GetBlocksMessage extends Message {
         // identifiers that spans the entire chain with exponentially increasing gaps between
         // them, until we end up at the genesis block. See CBlockLocator::Set()
         stream.write(new VarInt(locator.size()).encode());
-        for (Sha256Hash hash : locator.getHashes()) {
+        for (Sha256Hash hash : locator) {
             // Have to reverse as wire format is little endian.
             stream.write(hash.getReversedBytes());
         }
@@ -93,12 +95,13 @@ public class GetBlocksMessage extends Message {
         if (o == null || getClass() != o.getClass()) return false;
         GetBlocksMessage other = (GetBlocksMessage) o;
         return version == other.version && stopHash.equals(other.stopHash) &&
-            locator.size() == other.locator.size() && locator.equals(other.locator); // ignores locator ordering
+            locator.size() == other.locator.size() && locator.containsAll(other.locator); // ignores locator ordering
     }
 
     @Override
     public int hashCode() {
-        int hashCode = (int) version ^ "getblocks".hashCode() ^ stopHash.hashCode();
-        return hashCode ^= locator.hashCode();
+        int hashCode = (int)version ^ "getblocks".hashCode() ^ stopHash.hashCode();
+        for (Sha256Hash aLocator : locator) hashCode ^= aLocator.hashCode(); // ignores locator ordering
+        return hashCode;
     }
 }

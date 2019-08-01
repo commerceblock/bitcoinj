@@ -1,15 +1,11 @@
 target
-build
-.gradle
-gradlew
-gradlew.bat
-gradle/wrapper
 .project
 .classpath
 .settings
-bin/
 .idea
 *.iml
-out/
 *.chain
 *.spvchain
+
+# Mac OS X clutter
+*.DS_Store

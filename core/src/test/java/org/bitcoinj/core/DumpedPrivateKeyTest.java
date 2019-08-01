@@ -27,20 +27,21 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Arrays;
 
+import org.bitcoinj.params.BitcoinMainNetParams;
+import org.bitcoinj.params.BitcoinTestNet3Params;
 import org.junit.Test;
-import org.bitcoinj.params.MainNetParams;
-import org.bitcoinj.params.TestNet3Params;
 
 public class DumpedPrivateKeyTest {
-    private static final NetworkParameters MAINNET = MainNetParams.get();
-    private static final NetworkParameters TESTNET = TestNet3Params.get();
+
+    private static final BitcoinMainNetParams MAINNET = BitcoinMainNetParams.get();
+    private static final BitcoinTestNet3Params TESTNET = BitcoinTestNet3Params.get();
 
     @Test
     public void checkNetwork() throws Exception {
         DumpedPrivateKey.fromBase58(MAINNET, "5HtUCLMFWNueqN9unpgX2DzjMg6SDNZyKRb8s3LJgpFg5ubuMrk");
     }
 
-    @Test(expected = AddressFormatException.WrongNetwork.class)
+    @Test(expected = WrongNetworkException.class)
     public void checkNetworkWrong() throws Exception {
         DumpedPrivateKey.fromBase58(TESTNET, "5HtUCLMFWNueqN9unpgX2DzjMg6SDNZyKRb8s3LJgpFg5ubuMrk");
     }
@@ -90,18 +91,6 @@ public class DumpedPrivateKeyTest {
         bytes[bytes.length - 1] = 0; // set it to false
         base58 = Base58.encode(bytes); // 33-bytes key, compressed == false
         DumpedPrivateKey.fromBase58(null, base58); // fail
-    }
-
-    @Test(expected = AddressFormatException.InvalidDataLength.class)
-    public void fromBase58_tooShort() {
-        String base58 = Base58.encodeChecked(MAINNET.dumpedPrivateKeyHeader, new byte[31]);
-        DumpedPrivateKey.fromBase58(null, base58);
-    }
-
-    @Test(expected = AddressFormatException.InvalidDataLength.class)
-    public void fromBase58_tooLong() {
-        String base58 = Base58.encodeChecked(MAINNET.dumpedPrivateKeyHeader, new byte[34]);
-        DumpedPrivateKey.fromBase58(null, base58);
     }
 
     @Test

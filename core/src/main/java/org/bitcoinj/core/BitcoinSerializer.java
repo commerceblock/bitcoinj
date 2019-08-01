@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -78,7 +77,7 @@ public class BitcoinSerializer extends MessageSerializer {
     /**
      * Constructs a BitcoinSerializer with the given behavior.
      *
-     * @param params           networkParams used to create Messages instances and determining packetMagic
+     * @param params           networkParams used to create Messages instances and termining packetMagic
      * @param parseRetain      retain the backing byte array of a message for fast reserialization.
      */
     public BitcoinSerializer(NetworkParameters params, boolean parseRetain) {
@@ -275,14 +274,6 @@ public class BitcoinSerializer extends MessageSerializer {
     }
 
     /**
-     * Make a block from the payload. Extension point for header only block support.
-     */
-    @Override
-    public Block makeBlockHeader(final byte[] payloadBytes, final int offset, final int length) throws ProtocolException {
-        return new Block(params, payloadBytes, offset, this, length, true);
-    }
-
-    /**
      * Make an filter message from the payload. Extension point for alternative
      * serialization format support.
      */
@@ -314,9 +305,12 @@ public class BitcoinSerializer extends MessageSerializer {
      * serialization format support.
      */
     @Override
-    public Transaction makeTransaction(byte[] payloadBytes, int offset, int length, byte[] hashFromHeader)
-            throws ProtocolException {
-        return new Transaction(params, payloadBytes, offset, null, this, length, hashFromHeader);
+    public Transaction makeTransaction(byte[] payloadBytes, int offset,
+        int length, byte[] hash) throws ProtocolException {
+        Transaction tx = new Transaction(params, payloadBytes, offset, null, this, length);
+        if (hash != null)
+            tx.setHash(Sha256Hash.wrapReversed(hash));
+        return tx;
     }
 
     @Override
@@ -370,7 +364,7 @@ public class BitcoinSerializer extends MessageSerializer {
             for (; header[cursor] != 0 && cursor < COMMAND_LEN; cursor++) ;
             byte[] commandBytes = new byte[cursor];
             System.arraycopy(header, 0, commandBytes, 0, cursor);
-            command = new String(commandBytes, StandardCharsets.US_ASCII);
+            command = Utils.toString(commandBytes, "US-ASCII");
             cursor = COMMAND_LEN;
 
             size = (int) readUint32(header, cursor);

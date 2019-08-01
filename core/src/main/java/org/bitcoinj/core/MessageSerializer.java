@@ -63,20 +63,6 @@ public abstract class MessageSerializer {
      */
     public abstract Message makeAlertMessage(byte[] payloadBytes) throws ProtocolException, UnsupportedOperationException;
 
-    /**
-     * Make a block (header only) from the payload, using an offset of zero and the payload
-     * length as block length.
-     */
-    public final Block makeBlockHeader(byte[] payloadBytes) throws ProtocolException {
-        return makeBlockHeader(payloadBytes, 0, payloadBytes.length);
-    }
-
-    /**
-     * Make a block (header only) from the payload, using an offset of zero and the provided
-     * length as block length. Extension point for alternative
-     * serialization format support.
-     */
-    public abstract Block makeBlockHeader(final byte[] payloadBytes, final int offset, final int length) throws ProtocolException, UnsupportedOperationException;
 
     /**
      * Make a block from the payload, using an offset of zero and the payload

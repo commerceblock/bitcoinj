@@ -22,7 +22,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.MainNetParams;
+import org.bitcoinj.params.BitcoinMainNetParams;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +39,6 @@ import static org.junit.Assert.assertEquals;
  */
 public class BIP32Test {
     private static final Logger log = LoggerFactory.getLogger(BIP32Test.class);
-    private static final NetworkParameters MAINNET = MainNetParams.get();
 
     HDWTestVector[] tvs = {
             new HDWTestVector(
@@ -149,9 +148,10 @@ public class BIP32Test {
     private void testVector(int testCase) {
         log.info("=======  Test vector {}", testCase);
         HDWTestVector tv = tvs[testCase];
+        NetworkParameters params = BitcoinMainNetParams.get();
         DeterministicKey masterPrivateKey = HDKeyDerivation.createMasterPrivateKey(HEX.decode(tv.seed));
-        assertEquals(testEncode(tv.priv), testEncode(masterPrivateKey.serializePrivB58(MAINNET)));
-        assertEquals(testEncode(tv.pub), testEncode(masterPrivateKey.serializePubB58(MAINNET)));
+        assertEquals(testEncode(tv.priv), testEncode(masterPrivateKey.serializePrivB58(params)));
+        assertEquals(testEncode(tv.pub), testEncode(masterPrivateKey.serializePubB58(params)));
         DeterministicHierarchy dh = new DeterministicHierarchy(masterPrivateKey);
         for (int i = 0; i < tv.derived.size(); i++) {
             HDWTestVector.DerivedTestCase tc = tv.derived.get(i);
@@ -159,8 +159,8 @@ public class BIP32Test {
             assertEquals(tc.name, String.format(Locale.US, "Test%d %s", testCase + 1, tc.getPathDescription()));
             int depth = tc.path.length - 1;
             DeterministicKey ehkey = dh.deriveChild(Arrays.asList(tc.path).subList(0, depth), false, true, tc.path[depth]);
-            assertEquals(testEncode(tc.priv), testEncode(ehkey.serializePrivB58(MAINNET)));
-            assertEquals(testEncode(tc.pub), testEncode(ehkey.serializePubB58(MAINNET)));
+            assertEquals(testEncode(tc.priv), testEncode(ehkey.serializePrivB58(params)));
+            assertEquals(testEncode(tc.pub), testEncode(ehkey.serializePubB58(params)));
         }
     }
 

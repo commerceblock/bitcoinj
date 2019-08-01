@@ -46,8 +46,7 @@ public class TxConfidenceTable {
             hash = confidence.getTransactionHash();
         }
     }
-    private final Map<Sha256Hash, WeakConfidenceReference> table;
-    private final TransactionConfidence.Factory confidenceFactory;
+    private LinkedHashMap<Sha256Hash, WeakConfidenceReference> table;
 
     // This ReferenceQueue gets entries added to it when they are only weakly reachable, ie, the TxConfidenceTable is the
     // only thing that is tracking the confidence data anymore. We check it from time to time and delete table entries
@@ -65,10 +64,6 @@ public class TxConfidenceTable {
      * @param size Max number of transactions to track. The table will fill up to this size then stop growing.
      */
     public TxConfidenceTable(final int size) {
-        this(size, new TransactionConfidence.Factory());
-    }
-
-    TxConfidenceTable(final int size, TransactionConfidence.Factory confidenceFactory){
         table = new LinkedHashMap<Sha256Hash, WeakConfidenceReference>() {
             @Override
             protected boolean removeEldestEntry(Map.Entry<Sha256Hash, WeakConfidenceReference> entry) {
@@ -78,7 +73,6 @@ public class TxConfidenceTable {
             }
         };
         referenceQueue = new ReferenceQueue<>();
-        this.confidenceFactory = confidenceFactory;
     }
 
     /**
@@ -137,7 +131,7 @@ public class TxConfidenceTable {
 
     /**
      * Called by peers when they see a transaction advertised in an "inv" message. It passes the data on to the relevant
-     * {@link TransactionConfidence} object, creating it if needed.
+     * {@link org.bitcoinj.core.TransactionConfidence} object, creating it if needed.
      *
      * @return the number of peers that have now announced this hash (including the caller)
      */
@@ -145,13 +139,12 @@ public class TxConfidenceTable {
         TransactionConfidence confidence;
         boolean fresh = false;
         lock.lock();
-        try {
+        {
             cleanTable();
             confidence = getOrCreate(hash);
             fresh = confidence.markBroadcastBy(byPeer);
-        } finally {
-            lock.unlock();
         }
+        lock.unlock();
         if (fresh)
             confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.SEEN_PEERS);
         return confidence;
@@ -171,7 +164,7 @@ public class TxConfidenceTable {
                 if (confidence != null)
                     return confidence;
             }
-            TransactionConfidence newConfidence = confidenceFactory.createConfidence(hash);
+            TransactionConfidence newConfidence = new TransactionConfidence(hash);
             table.put(hash, new WeakConfidenceReference(newConfidence, referenceQueue));
             return newConfidence;
         } finally {

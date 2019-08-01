@@ -20,7 +20,6 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.params.AbstractBitcoinNetParams;
 
 import javax.annotation.Nullable;
 
@@ -34,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.bitcoinj.params.BitcoinMainNetParams;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -84,13 +84,6 @@ public class BitcoinURI {
     public static final String FIELD_ADDRESS = "address";
     public static final String FIELD_PAYMENT_REQUEST_URL = "r";
 
-    /**
-     * URI for Bitcoin network. Use {@link AbstractBitcoinNetParams#BITCOIN_SCHEME} if you specifically
-     * need Bitcoin, or use {@link NetworkParameters#getUriScheme} to get the scheme
-     * from network parameters.
-     */
-    @Deprecated
-    public static final String BITCOIN_SCHEME = "bitcoin";
     private static final String ENCODED_SPACE_CHARACTER = "%20";
     private static final String AMPERSAND_SEPARATOR = "&";
     private static final String QUESTION_MARK_SEPARATOR = "?";
@@ -123,7 +116,7 @@ public class BitcoinURI {
         checkNotNull(input);
 
         String scheme = null == params
-            ? AbstractBitcoinNetParams.BITCOIN_SCHEME
+            ? BitcoinMainNetParams.URI_SCHEME
             : params.getUriScheme();
 
         // Attempt to form the URI (fail fast syntax checking to official standards).
@@ -146,10 +139,9 @@ public class BitcoinURI {
         String blockchainInfoScheme = scheme + "://";
         String correctScheme = scheme + ":";
         String schemeSpecificPart;
-        final String inputLc = input.toLowerCase(Locale.US);
-        if (inputLc.startsWith(blockchainInfoScheme)) {
+        if (input.startsWith(blockchainInfoScheme)) {
             schemeSpecificPart = input.substring(blockchainInfoScheme.length());
-        } else if (inputLc.startsWith(correctScheme)) {
+        } else if (input.startsWith(correctScheme)) {
             schemeSpecificPart = input.substring(correctScheme.length());
         } else {
             throw new BitcoinURIParseException("Unsupported URI scheme: " + uri.getScheme());
@@ -176,7 +168,7 @@ public class BitcoinURI {
         if (!addressToken.isEmpty()) {
             // Attempt to parse the addressToken as a Bitcoin address for this network
             try {
-                Address address = Address.fromString(params, addressToken);
+                Address address = Address.fromBase58(params, addressToken);
                 putWithValidation(FIELD_ADDRESS, address);
             } catch (final AddressFormatException e) {
                 throw new BitcoinURIParseException("Bad address", e);
@@ -256,7 +248,7 @@ public class BitcoinURI {
     }
 
     /**
-     * The Bitcoin address from the URI, if one was present. It's possible to have Bitcoin URI's with no address if a
+     * The Bitcoin Address from the URI, if one was present. It's possible to have Bitcoin URI's with no address if a
      * r= payment protocol parameter is specified, though this form is not recommended as older wallets can't understand
      * it.
      */

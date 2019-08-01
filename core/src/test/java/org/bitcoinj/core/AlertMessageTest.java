@@ -17,7 +17,7 @@
 
 package org.bitcoinj.core;
 
-import org.bitcoinj.params.UnitTestParams;
+import org.bitcoinj.params.BitcoinUnitTestParams;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -32,7 +32,7 @@ public class AlertMessageTest {
     @Before
     public void setUp() throws Exception {
         final ECKey key = ECKey.fromPrivate(TEST_KEY_PRIV);
-        params = new UnitTestParams() {
+        params = new BitcoinUnitTestParams() {
             @Override
             public byte[] getAlertSigningKey() {
                 return key.getPubKey();

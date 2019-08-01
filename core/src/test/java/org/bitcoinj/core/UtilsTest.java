@@ -21,7 +21,6 @@ package org.bitcoinj.core;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 
 import org.junit.Test;
 
@@ -32,6 +31,14 @@ public class UtilsTest {
     @Test
     public void testReverseBytes() {
         assertArrayEquals(new byte[]{1, 2, 3, 4, 5}, Utils.reverseBytes(new byte[]{5, 4, 3, 2, 1}));
+    }
+
+    @Test
+    public void testReverseDwordBytes() {
+        assertArrayEquals(new byte[]{1, 2, 3, 4, 5, 6, 7, 8}, Utils.reverseDwordBytes(new byte[]{4, 3, 2, 1, 8, 7, 6, 5}, -1));
+        assertArrayEquals(new byte[]{1, 2, 3, 4}, Utils.reverseDwordBytes(new byte[]{4, 3, 2, 1, 8, 7, 6, 5}, 4));
+        assertArrayEquals(new byte[0], Utils.reverseDwordBytes(new byte[]{4, 3, 2, 1, 8, 7, 6, 5}, 0));
+        assertArrayEquals(new byte[0], Utils.reverseDwordBytes(new byte[0], 0));
     }
 
     @Test
@@ -111,12 +118,5 @@ public class UtilsTest {
         byte[] expected = new byte[]{-128};                 // -128 == 1000_0000 (compl-2)
         byte[] actual = Utils.bigIntegerToBytes(b, 1);
         assertTrue(Arrays.equals(expected, actual));
-    }
-
-    @Test
-    public void runtime() {
-        // This test assumes it is run within a Java runtime for desktop computers.
-        assertTrue(Utils.isOpenJDKRuntime() || Utils.isOracleJavaRuntime());
-        assertFalse(Utils.isAndroidRuntime());
     }
 }

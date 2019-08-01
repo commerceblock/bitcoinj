@@ -24,7 +24,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Locale;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.bitcoinj.core.Coin;
@@ -217,11 +216,6 @@ public class MonetaryFormatTest {
     }
 
     @Test
-    public void standardSymbol() throws Exception {
-        assertEquals(MonetaryFormat.SYMBOL_BTC + " 0.00", new MonetaryFormat(true).format(Coin.ZERO).toString());
-    }
-
-    @Test
     public void customCode() throws Exception {
         assertEquals("dBTC 0", MonetaryFormat.UBTC.code(1, "dBTC").shift(1).format(Coin.ZERO).toString());
     }
@@ -257,12 +251,6 @@ public class MonetaryFormatTest {
         final Coin value = Coin.valueOf(-1234567890l);
         assertEquals("-12.34567890", NO_CODE.withLocale(Locale.US).format(value).toString());
         assertEquals("-12,34567890", NO_CODE.withLocale(Locale.GERMANY).format(value).toString());
-    }
-
-    @Ignore("non-determinism between OpenJDK versions")
-    @Test
-    public void withLocaleDevanagari() throws Exception {
-        final Coin value = Coin.valueOf(-1234567890l);
         assertEquals("-१२.३४५६७८९०", NO_CODE.withLocale(new Locale("hi", "IN")).format(value).toString()); // Devanagari
     }
 
@@ -351,19 +339,5 @@ public class MonetaryFormatTest {
     @Test
     public void fiat() throws Exception {
         assertEquals(ONE_EURO, NO_CODE.parseFiat("EUR", "1"));
-    }
-
-    @Test
-    public void testEquals() {
-        MonetaryFormat mf1 = new MonetaryFormat(true);
-        MonetaryFormat mf2 = new MonetaryFormat(true);
-        assertEquals(mf1, mf2);
-    }
-
-    @Test
-    public void testHashCode() {
-        MonetaryFormat mf1 = new MonetaryFormat(true);
-        MonetaryFormat mf2 = new MonetaryFormat(true);
-        assertEquals(mf1.hashCode(), mf2.hashCode());
     }
 }

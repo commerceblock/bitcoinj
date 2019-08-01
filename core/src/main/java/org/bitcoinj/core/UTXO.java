@@ -146,22 +146,35 @@ public class UTXO implements Serializable {
 
     public void serializeToStream(OutputStream bos) throws IOException {
         Utils.uint64ToByteStreamLE(BigInteger.valueOf(value.value), bos);
+
         byte[] scriptBytes = script.getProgram();
-        Utils.uint32ToByteStreamLE(scriptBytes.length, bos);
+        bos.write(0xFF & scriptBytes.length);
+        bos.write(0xFF & scriptBytes.length >> 8);
+        bos.write(0xFF & (scriptBytes.length >> 16));
+        bos.write(0xFF & (scriptBytes.length >> 24));
         bos.write(scriptBytes);
+
         bos.write(hash.getBytes());
         Utils.uint32ToByteStreamLE(index, bos);
-        Utils.uint32ToByteStreamLE(height, bos);
+
+        bos.write(0xFF & (height));
+        bos.write(0xFF & (height >> 8));
+        bos.write(0xFF & (height >> 16));
+        bos.write(0xFF & (height >> 24));
+
         bos.write(new byte[] { (byte)(coinbase ? 1 : 0) });
     }
-
+    
     public void deserializeFromStream(InputStream in) throws IOException {
         byte[] valueBytes = new byte[8];
         if (in.read(valueBytes, 0, 8) != 8)
             throw new EOFException();
         value = Coin.valueOf(Utils.readInt64(valueBytes, 0));
 
-        int scriptBytesLength = (int) Utils.readUint32FromStream(in);
+        int scriptBytesLength = ((in.read() & 0xFF)) |
+                ((in.read() & 0xFF) << 8) |
+                ((in.read() & 0xFF) << 16) |
+                ((in.read() & 0xFF) << 24);
         byte[] scriptBytes = new byte[scriptBytesLength];
         if (in.read(scriptBytes) != scriptBytesLength)
             throw new EOFException();
@@ -177,7 +190,10 @@ public class UTXO implements Serializable {
             throw new EOFException();
         index = Utils.readUint32(indexBytes, 0);
 
-        height = (int) Utils.readUint32FromStream(in);
+        height = ((in.read() & 0xFF)) |
+                ((in.read() & 0xFF) << 8) |
+                ((in.read() & 0xFF) << 16) |
+                ((in.read() & 0xFF) << 24);
 
         byte[] coinbaseByte = new byte[1];
         in.read(coinbaseByte);
