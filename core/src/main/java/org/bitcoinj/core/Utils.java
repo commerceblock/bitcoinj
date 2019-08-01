@@ -355,6 +355,16 @@ public class Utils {
      */
     public static volatile Date mockTime;
 
+    /*
+     * Used in reading fields of a transaction output which can be of variable length and must be combined.
+     */
+    public static byte[] concatenateArrays(byte[] a, byte[] b) {
+        byte[] c = new byte[a.length + b.length];
+        System.arraycopy(a, 0, c, 0, a.length);
+        System.arraycopy(b, 0, c, a.length, b.length);
+        return c;
+    }
+
     /**
      * Advances (or rewinds) the mock clock by the given number of seconds.
      */
