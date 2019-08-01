@@ -490,7 +490,11 @@ public class Transaction extends ChildMessage {
         cursor = offset;
 
         version = readUint32();
-        optimalEncodingMessageSize = 4;
+        optimalEncodingMessageSize = 5;
+
+        // read the flag
+        byte marker = readBytes(1)[0];
+        boolean useOceanWitness = marker == 0;
 
         // First come the inputs.
         long numInputs = readVarInt();
@@ -516,6 +520,11 @@ public class Transaction extends ChildMessage {
         }
         lockTime = readUint32();
         optimalEncodingMessageSize += 4;
+
+        if (useOceanWitness) {
+            //do something
+        }
+
         length = cursor - offset;
     }
 
