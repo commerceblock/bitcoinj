@@ -47,6 +47,15 @@ public abstract class Message {
     // Potential length of value field (output) in ocean
     public static final int CONFIDENTIAL_VALUE = 9;
 
+    // A number used for bitwise AND operation on outpoint index to find if the input has issuance.
+    public static final long OUTPOINT_ISSUANCE_FLAG = (1 << 31) >>> 0;
+    // A number used for bitwise AND operation on outpoint index to find if the input is pegin.
+    public static final long OUTPOINT_PEGIN_FLAG = (1 << 30) >>> 0;
+    // A number used for bitwise AND operation on outpoint index to turn the last 2 bits to 0's.
+    public static final long OUTPOINT_INDEX_MASK = 0x3fffffff;
+    // Used for ocean to determine if mask needs to be applied and flags should be checked.
+    public static final long MINUS_1 = 4294967295L;
+
     // Useful to ensure serialize/deserialize are consistent with each other.
     private static final boolean SELF_CHECK = false;
 

@@ -83,6 +83,10 @@ public class TransactionInput extends ChildMessage {
 
     private TransactionWitness witness;
 
+    private TransactionIssuance issuance;
+
+    private boolean isPegin;
+
     /**
      * Creates an input that connects to nothing - used only in creation of coinbase transactions.
      */
@@ -161,11 +165,27 @@ public class TransactionInput extends ChildMessage {
     @Override
     protected void parse() throws ProtocolException {
         outpoint = new TransactionOutPoint(params, payload, cursor, this, serializer);
+        isPegin = false;
         cursor += outpoint.getMessageSize();
         int scriptLen = (int) readVarInt();
         length = cursor - offset + scriptLen + 4;
         scriptBytes = readBytes(scriptLen);
         sequence = readUint32();
+        long outpointIndex = outpoint.getIndex();
+        if (outpointIndex != MINUS_1) {
+            if ((outpointIndex & OUTPOINT_ISSUANCE_FLAG) > 0) {
+                issuance = new TransactionIssuance(
+                    readBytes(32),
+                    readBytes(32),
+                    readConfidentialValue(),
+                    readConfidentialValue()
+                );
+            }
+            if ((outpointIndex & OUTPOINT_PEGIN_FLAG) > 0) {
+                isPegin = true;
+            }
+            outpoint.setIndex(outpointIndex & OUTPOINT_INDEX_MASK);
+        }
     }
 
     @Override
@@ -292,6 +312,22 @@ public class TransactionInput extends ChildMessage {
      */
     public void setWitness(TransactionWitness witness) {
         this.witness = witness;
+    }
+
+    /**
+     * Get the transaction issuance of this input.
+     * 
+     * @return the issuance of the input
+     */
+    public TransactionIssuance getIssuance() {
+        return issuance != null ? issuance : null;
+    }
+
+    /**
+     * Set the transaction issuance of an input.
+     */
+    public void setIssuance(TransactionIssuance issuance) {
+        this.issuance = issuance;
     }
 
     /**
