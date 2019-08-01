@@ -41,7 +41,7 @@ public class StoredBlock {
     // bytes to represent this field, so 12 bytes should be plenty for now.
     public static final int CHAIN_WORK_BYTES = 12;
     public static final byte[] EMPTY_BYTES = new byte[CHAIN_WORK_BYTES];
-    public int COMPACT_SERIALIZED_SIZE = Block.HEADER_SIZE_FULL + CHAIN_WORK_BYTES + 4;  // for height
+    public int COMPACT_SERIALIZED_SIZE = 173 + CHAIN_WORK_BYTES + 4;  // for height
 
     private Block header;
     private BigInteger chainWork;

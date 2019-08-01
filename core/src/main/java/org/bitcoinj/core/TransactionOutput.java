@@ -45,6 +45,12 @@ public class TransactionOutput extends ChildMessage {
     // this output.
     private byte[] scriptBytes;
 
+    // An ocean asset that the output is using
+    private byte[] asset;
+
+    // A number used once, typically is not set and equal to 0
+    private byte[] nonce;
+
     // The script bytes are parsed and turned into a Script on demand.
     private Script scriptPubKey;
 
@@ -138,7 +144,9 @@ public class TransactionOutput extends ChildMessage {
 
     @Override
     protected void parse() throws ProtocolException {
-        value = readInt64();
+        asset = readConfidentialAsset();
+        value = readConfidentialValue();
+        nonce = readConfidentialNonce();
         scriptLen = (int) readVarInt();
         length = cursor - offset + scriptLen;
         scriptBytes = readBytes(scriptLen);

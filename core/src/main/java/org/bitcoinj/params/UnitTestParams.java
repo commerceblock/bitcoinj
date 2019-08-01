@@ -45,7 +45,6 @@ public class UnitTestParams extends AbstractBitcoinNetParams {
         genesisBlock.setMappingHash(Utils.HEX.decode(ZERO_HASH));
         genesisBlock.setBlockHeight(0);
         genesisBlock.setChallengeScript(new Script(Utils.HEX.decode("51")));
-        genesisBlock.solve();
         port = 18333;
         interval = 10;
         dumpedPrivateKeyHeader = 239;

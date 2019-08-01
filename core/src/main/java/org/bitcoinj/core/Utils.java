@@ -341,6 +341,16 @@ public class Utils {
         }
     }
 
+    /*
+     * Used in reading fields of a transaction output which can be of variable length and must be combined.
+     */
+    public static byte[] concatenateArrays(byte[] a, byte[] b) {
+        byte[] c = new byte[a.length + b.length];
+        System.arraycopy(a, 0, c, 0, a.length);
+        System.arraycopy(b, 0, c, a.length, b.length);
+        return c;
+    }
+
     /**
      * <p>The "compact" format is a representation of a whole number N using an unsigned 32 bit number similar to a
      * floating point format. The most significant 8 bits are the unsigned exponent of base 256. This exponent can

@@ -1068,7 +1068,7 @@ public class Block extends Message {
             b.setTime(getTimeSeconds() + 1);
         else
             b.setTime(time);
-        b.solve();
+        //b.solve(); TODO may need some improvements relating to challenge and proof
         try {
             b.verifyHeader();
         } catch (VerificationException e) {

@@ -1700,7 +1700,8 @@ public class PeerGroup implements TransactionBroadcaster {
     }
 
     @GuardedBy("lock") private int stallPeriodSeconds = 10;
-    @GuardedBy("lock") private int stallMinSpeedBytesSec = Block.HEADER_SIZE * 10;
+    // Block header with challenge or proof size (172 + 1) replaced HEADER_SIZE as it is no longer static
+    @GuardedBy("lock") private int stallMinSpeedBytesSec = 173 * 10;
 
     /**
      * Configures the stall speed: the speed at which a peer is considered to be serving us the block chain
@@ -1745,7 +1746,7 @@ public class PeerGroup implements TransactionBroadcaster {
         @Override
         public synchronized void onBlocksDownloaded(Peer peer, Block block, @Nullable FilteredBlock filteredBlock, int blocksLeft) {
             blocksInLastSecond++;
-            bytesInLastSecond += Block.HEADER_SIZE;
+            bytesInLastSecond += block.HEADER_SIZE_FULL;
             List<Transaction> blockTransactions = block.getTransactions();
             // This whole area of the type hierarchy is a mess.
             int txCount = (blockTransactions != null ? countAndMeasureSize(blockTransactions) : 0) +

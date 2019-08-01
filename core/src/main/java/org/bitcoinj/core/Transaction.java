@@ -602,27 +602,26 @@ public class Transaction extends ChildMessage {
     @Override
     protected void parse() throws ProtocolException {
         cursor = offset;
-        optimalEncodingMessageSize = 4;
+        optimalEncodingMessageSize = 5;
 
         // version
         version = readUint32();
-        // peek at marker
-        byte marker = payload[cursor];
+        // read the flag
+        byte marker = readBytes(1)[0];
         boolean useSegwit = marker == 0;
-        // marker, flag
-        if (useSegwit) {
-            readBytes(2);
-            optimalEncodingMessageSize += 2;
-        }
+
         // txin_count, txins
         parseInputs();
         // txout_count, txouts
         parseOutputs();
-        // script_witnesses
-        if (useSegwit)
-            parseWitnesses();
+
         // lock_time
         lockTime = readUint32();
+
+        if (useSegwit) {
+            //do something
+        }
+
         optimalEncodingMessageSize += 4;
 
         length = cursor - offset;
@@ -1406,9 +1405,10 @@ public class Transaction extends ChildMessage {
         uint32ToByteStreamLE(version, stream);
         // marker, flag
         if (useSegwit) {
-            stream.write(0);
             stream.write(1);
         }
+        else
+            stream.write(0);
         // txin_count, txins
         stream.write(new VarInt(inputs.size()).encode());
         for (TransactionInput in : inputs)
