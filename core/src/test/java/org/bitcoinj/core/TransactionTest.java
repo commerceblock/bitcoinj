@@ -306,7 +306,7 @@ public class TransactionTest {
     public void testAddSignedInputThrowsExceptionWhenScriptIsNotToRawPubKeyAndIsNotToAddress() {
         ECKey key = new ECKey();
         Address addr = key.toAddress(PARAMS);
-        Transaction fakeTx = FakeTxBuilder.createFakeTx(PARAMS, Coin.COIN, addr);
+        Transaction fakeTx = FakeTxBuilder.createFakeTx(PARAMS, ASSET, VALUE, NONCE, addr);
 
         Transaction tx = new Transaction(PARAMS);
         tx.addOutput(fakeTx.getOutput(0));
@@ -318,7 +318,7 @@ public class TransactionTest {
 
     @Test
     public void testPrioSizeCalc() throws Exception {
-        Transaction tx1 = FakeTxBuilder.createFakeTx(PARAMS, Coin.COIN, ADDRESS);
+        Transaction tx1 = FakeTxBuilder.createFakeTx(PARAMS, ASSET, VALUE, NONCE, ADDRESS);
         int size1 = tx1.getMessageSize();
         int size2 = tx1.getMessageSizeForPriorityCalc();
         assertEquals(113, size1 - size2);
