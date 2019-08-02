@@ -30,9 +30,9 @@ import static org.bitcoinj.core.Coin.*;
 import static com.google.common.base.Preconditions.checkState;
 
 public class FakeTxBuilder {
-    public static final byte[] dummyAsset = Utils.HEX.decode('01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d');
-    public static final byte[] dummyNonce = Utils.HEX.decode('00');
-    public static final byte[] dummyValue = Utils.HEX.decode('010000000005f5e100');
+    public static final byte[] dummyAsset = Utils.HEX.decode("01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d");
+    public static final byte[] dummyNonce = Utils.HEX.decode("00");
+    public static final byte[] dummyValue = Utils.HEX.decode("010000000005f5e100");
 
     /** Create a fake transaction, without change. */
     public static Transaction createFakeTx(final NetworkParameters params) {
@@ -41,7 +41,7 @@ public class FakeTxBuilder {
 
     /** Create a fake transaction, without change. */
     public static Transaction createFakeTxWithoutChange(final NetworkParameters params, final TransactionOutput output) {
-        Transaction prevTx = FakeTxBuilder.createFakeTx(params, Coin.COIN, new ECKey().toAddress(params));
+        Transaction prevTx = FakeTxBuilder.createFakeTx(params, dummyAsset, dummyValue, dummyNonce, new ECKey().toAddress(params));
         Transaction tx = new Transaction(params);
         tx.addOutput(output);
         tx.addInput(prevTx.getOutput(0));
@@ -54,8 +54,8 @@ public class FakeTxBuilder {
         TransactionInput input = new TransactionInput(params, null, new byte[0], outpoint);
         Transaction tx = new Transaction(params);
         tx.addInput(input);
-        TransactionOutput outputToMe = new TransactionOutput(params, tx, Coin.FIFTY_COINS,
-                new ECKey().toAddress(params));
+        TransactionOutput outputToMe = new TransactionOutput(params, tx, dummyAsset, Coin.FIFTY_COINS,
+                dummyNonce, new ECKey().toAddress(params));
         tx.addOutput(outputToMe);
 
         checkState(tx.isCoinBase());
@@ -66,16 +66,17 @@ public class FakeTxBuilder {
      * Create a fake TX of sufficient realism to exercise the unit tests. Two outputs, one to us, one to somewhere
      * else to simulate change. There is one random input.
      */
-    public static Transaction createFakeTxWithChangeAddress(NetworkParameters params, Coin value, Address to, Address changeOutput) {
+    public static Transaction createFakeTxWithChangeAddress(NetworkParameters params, byte[] asset, byte[] nValue,
+            byte[] nonce, Address to, Address changeOutput) {
         Transaction t = new Transaction(params);
-        TransactionOutput outputToMe = new TransactionOutput(params, t, value, to);
+        TransactionOutput outputToMe = new TransactionOutput(params, t, asset, nValue, nonce, to);
         t.addOutput(outputToMe);
-        TransactionOutput change = new TransactionOutput(params, t, valueOf(1, 11), changeOutput);
+        TransactionOutput change = new TransactionOutput(params, t, asset, valueOf(1, 11), nonce, changeOutput);
         t.addOutput(change);
         // Make a previous tx simply to send us sufficient coins. This prev tx is not really valid but it doesn't
         // matter for our purposes.
         Transaction prevTx = new Transaction(params);
-        TransactionOutput prevOut = new TransactionOutput(params, prevTx, value, to);
+        TransactionOutput prevOut = new TransactionOutput(params, prevTx, asset, nValue, nonce, to);
         prevTx.addOutput(prevOut);
         // Connect it.
         t.addInput(prevOut).setScriptSig(ScriptBuilder.createInputScript(TransactionSignature.dummy()));
@@ -126,8 +127,9 @@ public class FakeTxBuilder {
      * Create a fake TX of sufficient realism to exercise the unit tests. Two outputs, one to us, one to somewhere
      * else to simulate change. There is one random input.
      */
-    public static Transaction createFakeTx(NetworkParameters params, Coin value, Address to) {
-        return createFakeTxWithChangeAddress(params, value, to, new ECKey().toAddress(params));
+    public static Transaction createFakeTx(NetworkParameters params, byte[] asset, byte[] nValue,
+            byte[] nonce, Address to) {
+        return createFakeTxWithChangeAddress(params, asset, nValue, nonce, to, new ECKey().toAddress(params));
     }
 
     /**

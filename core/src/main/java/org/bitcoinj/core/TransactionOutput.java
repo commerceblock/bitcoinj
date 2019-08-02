@@ -96,8 +96,9 @@ public class TransactionOutput extends ChildMessage {
      * something like {@link Coin#valueOf(int, int)}. Typically you would use
      * {@link Transaction#addOutput(Coin, Address)} instead of creating a TransactionOutput directly.
      */
-    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, Coin value, Address to) {
-        this(params, parent, value, ScriptBuilder.createOutputScript(to).getProgram());
+    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, byte[] asset, 
+        byte[] nValue, byte[] nonce, Address to) {
+        this(params, parent, asset, nValue, nonce, ScriptBuilder.createOutputScript(to).getProgram());
     }
 
     /**
@@ -105,34 +106,17 @@ public class TransactionOutput extends ChildMessage {
      * amount should be created with something like {@link Coin#valueOf(int, int)}. Typically you would use
      * {@link Transaction#addOutput(Coin, ECKey)} instead of creating an output directly.
      */
-    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, Coin value, ECKey to) {
-        this(params, parent, value, ScriptBuilder.createOutputScript(to).getProgram());
+    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, byte[] asset, byte[] nValue,
+        byte[] nonce, ECKey to) {
+        this(params, parent, asset, nValue, nonce, ScriptBuilder.createOutputScript(to).getProgram());
     }
 
-    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, byte[] asset, byte[] nonce,
-        byte[] nValue, byte[] scriptBytes) {
+    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, byte[] asset, byte[] nValue,
+        byte[] nonce, byte[] scriptBytes) {
         
         super(params);
         
-        boolean coinValid = false;
-        Coin coinValue;
-        if(nValue.length == CONFIDENTIAL_VALUE) {
-            byte[] valueArray = new byte[CONFIDENTIAL_VALUE-1];
-            System.arraycopy(nValue, 1, valueArray, 0, CONFIDENTIAL_VALUE-1);
-            valueArray = Utils.reverseBytes(valueArray);
-            coinValue = Utils.readInt64(valueArray, 0);
-
-            // Negative values obviously make no sense, except for -1 which is used as a sentinel value when calculating
-            // SIGHASH_SINGLE signatures, so unfortunately we have to allow that here.
-            checkArgument(coinValue.signum() >= 0 || coinValue.equals(Coin.NEGATIVE_SATOSHI), "Negative values not allowed");
-            checkArgument(!params.hasMaxMoney() || coinValue.compareTo(params.getMaxMoney()) <= 0, "Values larger than MAX_MONEY not allowed");
-
-            coinValid = true;
-        }
-
-        if (coinValid) {
-            this.value = coinValue.value;
-        }
+        setValue(nValue);
         
         this.nValue = nValue;
         this.asset = asset;
@@ -236,6 +220,81 @@ public class TransactionOutput extends ChildMessage {
         checkNotNull(value);
         unCache();
         this.value = value.value;
+    }
+
+    /**
+     * Sets the value of this (nValue passed). Use only in init or setNValue contexts.
+     */
+    public void setValue(byte[] value) {
+        checkNotNull(value);
+        boolean coinValid = false;
+        Coin coinValue = Coin.ZERO;
+        if(value.length == CONFIDENTIAL_VALUE) {
+            byte[] valueArray = new byte[CONFIDENTIAL_VALUE-1];
+            System.arraycopy(value, 1, valueArray, 0, CONFIDENTIAL_VALUE-1);
+            valueArray = Utils.reverseBytes(valueArray);
+            coinValue = Coin.valueOf(Utils.readInt64(valueArray, 0));
+
+            // Negative values obviously make no sense, except for -1 which is used as a sentinel value when calculating
+            // SIGHASH_SINGLE signatures, so unfortunately we have to allow that here.
+            checkArgument(coinValue.signum() >= 0 || coinValue.equals(Coin.NEGATIVE_SATOSHI), "Negative values not allowed");
+            checkArgument(!params.hasMaxMoney() || coinValue.compareTo(params.getMaxMoney()) <= 0, "Values larger than MAX_MONEY not allowed");
+
+            coinValid = true;
+        }
+
+        if (coinValid) {
+            this.value = coinValue.value;
+        }
+    }
+
+    /**
+     * Returns the asset of this output.
+     */
+    public byte[] getAsset() {
+        return this.asset;
+    }
+
+    /**
+     * Sets the asset of this output.
+     */
+    public void setAsset(byte[] asset) {
+        checkNotNull(asset);
+        unCache();
+        this.asset = asset;
+    }
+
+    /**
+     * Returns the nonce of this output.
+     */
+    public byte[] getNonce() {
+        return this.nonce;
+    }
+
+    /**
+     * Sets the nonce of this output.
+     */
+    public void setNonce(byte[] asset) {
+        checkNotNull(nonce);
+        unCache();
+        this.nonce = nonce;
+    }
+
+    /**
+     * Returns the asset of this output.
+     */
+    public byte[] getNValue() {
+        return this.nValue;
+    }
+
+    /**
+     * Sets the asset of this output.
+     */
+    public void setNValue(byte[] nValue) {
+        checkNotNull(nValue);
+        unCache();
+        this.nValue = nValue;
+        setValue(nValue);
     }
 
     /**
@@ -456,7 +515,7 @@ public class TransactionOutput extends ChildMessage {
 
     /** Returns a copy of the output detached from its containing transaction, if need be. */
     public TransactionOutput duplicateDetached() {
-        return new TransactionOutput(params, null, Coin.valueOf(value), org.spongycastle.util.Arrays.clone(scriptBytes));
+        return new TransactionOutput(params, null, asset, nValue, nonce, org.spongycastle.util.Arrays.clone(scriptBytes));
     }
 
     @Override

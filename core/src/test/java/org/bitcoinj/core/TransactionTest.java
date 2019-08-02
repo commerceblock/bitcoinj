@@ -39,6 +39,9 @@ import static org.junit.Assert.*;
 public class TransactionTest {
     private static final NetworkParameters PARAMS = BitcoinUnitTestParams.get();
     private static final Address ADDRESS = new ECKey().toAddress(PARAMS);
+    public static final byte[] ASSET = Utils.HEX.decode("01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d");
+    public static final byte[] NONCE = Utils.HEX.decode("00");
+    public static final byte[] VALUE = Utils.HEX.decode("010000000005f5e100");
 
     private Transaction tx;
 
@@ -84,7 +87,7 @@ public class TransactionTest {
     public void exceedsMaxMoney2() throws Exception {
         Coin half = PARAMS.getMaxMoney().divide(2).add(Coin.SATOSHI);
         tx.getOutput(0).setValue(half);
-        tx.addOutput(half, ADDRESS);
+        tx.addOutput(ASSET, Coin.getOceanNValue(half), NONCE, ADDRESS);
         tx.verify();
     }
 
@@ -116,7 +119,7 @@ public class TransactionTest {
         int length = tx.length;
 
         // add basic transaction input, check the length
-        tx.addOutput(new TransactionOutput(PARAMS, null, Coin.COIN, ADDRESS));
+        tx.addOutput(new TransactionOutput(PARAMS, null, ASSET, VALUE, NONCE, ADDRESS));
         length += getCombinedLength(tx.getOutputs());
 
         // add basic output, check the length

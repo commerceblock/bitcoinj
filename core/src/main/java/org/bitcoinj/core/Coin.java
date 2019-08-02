@@ -105,6 +105,17 @@ public final class Coin implements Monetary, Comparable<Coin>, Serializable {
     }
 
     /**
+     * Returns an OCEAN value byte array from Coin
+     */
+    public static byte[] getOceanNValue(Coin val) {
+        byte[] numArr = new byte[(Message.CONFIDENTIAL_VALUE)-1];
+        Utils.uint64ToByteArrayLE(val.value, numArr, 0);
+        numArr = Utils.reverseBytes(numArr);
+        byte[] nValue = Utils.concatenateArrays(Utils.HEX.decode("01"), numArr);
+        return nValue;
+    }
+
+    /**
      * Convert an amount expressed in the way humans are used to into satoshis.
      */
     public static Coin valueOf(final int coins, final int cents) {

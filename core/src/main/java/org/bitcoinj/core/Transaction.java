@@ -836,26 +836,26 @@ public class Transaction extends ChildMessage {
     }
 
     /**
-     * Creates an output based on the given address and value, adds it to this transaction, and returns the new output.
+     * Creates an output based on the given address, nonce, asset and value, adds it to this transaction, and returns the new output.
      */
-    public TransactionOutput addOutput(Coin value, Address address) {
-        return addOutput(new TransactionOutput(params, this, value, address));
+    public TransactionOutput addOutput(byte[] asset, byte[] nValue, byte[] nonce, Address address) {
+        return addOutput(new TransactionOutput(params, this, asset, nValue, nonce, address));
     }
 
     /**
-     * Creates an output that pays to the given pubkey directly (no address) with the given value, adds it to this
+     * Creates an output that pays to the given pubkey directly (no address) with the given value, asset, nonce adds it to this
      * transaction, and returns the new output.
      */
-    public TransactionOutput addOutput(Coin value, ECKey pubkey) {
-        return addOutput(new TransactionOutput(params, this, value, pubkey));
+    public TransactionOutput addOutput(byte[] asset, byte[] nValue, byte[] nonce, ECKey pubkey) {
+        return addOutput(new TransactionOutput(params, this, asset, nValue, nonce, pubkey));
     }
 
     /**
      * Creates an output that pays to the given script. The address and key forms are specialisations of this method,
      * you won't normally need to use it unless you're doing unusual things.
      */
-    public TransactionOutput addOutput(Coin value, Script script) {
-        return addOutput(new TransactionOutput(params, this, value, script.getProgram()));
+    public TransactionOutput addOutput(byte[] asset, byte[] nValue, byte[] nonce, Script script) {
+        return addOutput(new TransactionOutput(params, this, asset, nValue, nonce, script.getProgram()));
     }
 
 
@@ -1069,7 +1069,8 @@ public class Transaction extends ChildMessage {
                 // that position are "nulled out". Unintuitively, the value in a "null" transaction is set to -1.
                 tx.outputs = new ArrayList<>(tx.outputs.subList(0, inputIndex + 1));
                 for (int i = 0; i < inputIndex; i++)
-                    tx.outputs.set(i, new TransactionOutput(tx.params, tx, Coin.NEGATIVE_SATOSHI, new byte[] {}));
+                    tx.outputs.set(i, new TransactionOutput(tx.params, tx, new byte[] {}, Coin.getOceanNValue(Coin.NEGATIVE_SATOSHI),
+                            new byte[] {}, new byte[] {}));
                 // The signature isn't broken by new versions of the transaction issued by other parties.
                 for (int i = 0; i < tx.inputs.size(); i++)
                     if (i != inputIndex)
