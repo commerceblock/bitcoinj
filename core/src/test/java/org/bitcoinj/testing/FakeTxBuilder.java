@@ -30,9 +30,13 @@ import static org.bitcoinj.core.Coin.*;
 import static com.google.common.base.Preconditions.checkState;
 
 public class FakeTxBuilder {
+    public static final byte[] dummyAsset = Utils.HEX.decode('01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d');
+    public static final byte[] dummyNonce = Utils.HEX.decode('00');
+    public static final byte[] dummyValue = Utils.HEX.decode('010000000005f5e100');
+
     /** Create a fake transaction, without change. */
     public static Transaction createFakeTx(final NetworkParameters params) {
-        return createFakeTxWithoutChangeAddress(params, Coin.COIN, new ECKey().toAddress(params));
+        return createFakeTxWithoutChangeAddress(params, dummyAsset, dummyValue, dummyNonce, new ECKey().toAddress(params));
     }
 
     /** Create a fake transaction, without change. */
@@ -84,9 +88,11 @@ public class FakeTxBuilder {
      * Create a fake TX for unit tests, for use with unit tests that need greater control. One outputs, 2 random inputs,
      * split randomly to create randomness.
      */
-    public static Transaction createFakeTxWithoutChangeAddress(NetworkParameters params, Coin value, Address to) {
+    public static Transaction createFakeTxWithoutChangeAddress(NetworkParameters params, byte[] asset, byte[] nValue,
+            byte[] nonce, Address to) {
+
         Transaction t = new Transaction(params);
-        TransactionOutput outputToMe = new TransactionOutput(params, t, value, to);
+        TransactionOutput outputToMe = new TransactionOutput(params, t, asset, nValue, nonce, to);
         t.addOutput(outputToMe);
 
         // Make a random split in the output value so we get a distinct hash when we call this multiple times with same args

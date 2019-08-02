@@ -109,13 +109,34 @@ public class TransactionOutput extends ChildMessage {
         this(params, parent, value, ScriptBuilder.createOutputScript(to).getProgram());
     }
 
-    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, Coin value, byte[] scriptBytes) {
+    public TransactionOutput(NetworkParameters params, @Nullable Transaction parent, byte[] asset, byte[] nonce,
+        byte[] nValue, byte[] scriptBytes) {
+        
         super(params);
-        // Negative values obviously make no sense, except for -1 which is used as a sentinel value when calculating
-        // SIGHASH_SINGLE signatures, so unfortunately we have to allow that here.
-        checkArgument(value.signum() >= 0 || value.equals(Coin.NEGATIVE_SATOSHI), "Negative values not allowed");
-        checkArgument(!params.hasMaxMoney() || value.compareTo(params.getMaxMoney()) <= 0, "Values larger than MAX_MONEY not allowed");
-        this.value = value.value;
+        
+        boolean coinValid = false;
+        Coin coinValue;
+        if(nValue.length == CONFIDENTIAL_VALUE) {
+            byte[] valueArray = new byte[CONFIDENTIAL_VALUE-1];
+            System.arraycopy(nValue, 1, valueArray, 0, CONFIDENTIAL_VALUE-1);
+            valueArray = Utils.reverseBytes(valueArray);
+            coinValue = Utils.readInt64(valueArray, 0);
+
+            // Negative values obviously make no sense, except for -1 which is used as a sentinel value when calculating
+            // SIGHASH_SINGLE signatures, so unfortunately we have to allow that here.
+            checkArgument(coinValue.signum() >= 0 || coinValue.equals(Coin.NEGATIVE_SATOSHI), "Negative values not allowed");
+            checkArgument(!params.hasMaxMoney() || coinValue.compareTo(params.getMaxMoney()) <= 0, "Values larger than MAX_MONEY not allowed");
+
+            coinValid = true;
+        }
+
+        if (coinValid) {
+            this.value = coinValue.value;
+        }
+        
+        this.nValue = nValue;
+        this.asset = asset;
+        this.nonce = nonce;
         this.scriptBytes = scriptBytes;
         setParent(parent);
         availableForSpending = true;
