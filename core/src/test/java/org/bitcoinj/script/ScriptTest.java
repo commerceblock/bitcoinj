@@ -56,6 +56,10 @@ public class ScriptTest {
 
     static final String pubkeyProg = "76a91433e81a941e64cda12c6a299ed322ddbdd03f8d0e88ac";
 
+    private final byte[] dummyAsset = Utils.HEX.decode("01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d");
+    private final byte[] dummyNonce = Utils.HEX.decode("00");
+    private final byte[] dummyValue = Utils.HEX.decode("010000000005f5e100");
+
     private static final NetworkParameters PARAMS = BitcoinTestNet3Params.get();
 
     private static final Logger log = LoggerFactory.getLogger(ScriptTest.class);
@@ -137,7 +141,7 @@ public class ScriptTest {
         Transaction spendTx = new Transaction(PARAMS);
         Address address = Address.fromBase58(PARAMS, "n3CFiCmBXVt5d3HXKQ15EFZyhPz4yj5F3H");
         Script outputScript = ScriptBuilder.createOutputScript(address);
-        spendTx.addOutput(output.getValue(), outputScript);
+        spendTx.addOutput(output.getAsset(), output.getNValue(), output.getNonce(), outputScript);
         spendTx.addInput(output);
         Sha256Hash sighash = spendTx.hashForSignature(0, multisigScript, SigHash.ALL, false);
         ECKey.ECDSASignature party1Signature = key1.sign(sighash);
@@ -334,7 +338,8 @@ public class ScriptTest {
         txInput.setSequenceNumber(TransactionInput.NO_SEQUENCE);
         tx.addInput(txInput);
 
-        TransactionOutput txOutput = new TransactionOutput(PARAMS, tx, Coin.ZERO, scriptPubKey.getProgram());
+        TransactionOutput txOutput = new TransactionOutput(PARAMS, tx, dummyAsset, Coin.getOceanNValue(Coin.ZERO),
+            dummyNonce, scriptPubKey.getProgram());
         tx.addOutput(txOutput);
 
         return tx;
@@ -342,15 +347,16 @@ public class ScriptTest {
 
     private Transaction buildSpendingTransaction(Transaction creditingTransaction, Script scriptSig) {
         Transaction tx = new Transaction(PARAMS);
-        tx.setVersion(1);
+        tx.setVersion(1);   
         tx.setLockTime(0);
 
         TransactionInput txInput = new TransactionInput(PARAMS, creditingTransaction, scriptSig.getProgram());
         txInput.setSequenceNumber(TransactionInput.NO_SEQUENCE);
         tx.addInput(txInput);
 
-        TransactionOutput txOutput = new TransactionOutput(PARAMS, tx, creditingTransaction.getOutput(0).getValue(),
-                new Script(new byte[] {}).getProgram());
+        TransactionOutput txOutput = new TransactionOutput(PARAMS, tx, creditingTransaction.getOutput(0).getAsset(),
+            creditingTransaction.getOutput(0).getNValue(), creditingTransaction.getOutput(0).getNonce(),
+            new Script(new byte[] {}).getProgram());
         tx.addOutput(txOutput);
 
         return tx;

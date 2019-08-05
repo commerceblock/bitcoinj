@@ -323,11 +323,11 @@ public class TransactionTest {
         int size2 = tx1.getMessageSizeForPriorityCalc();
         assertEquals(113, size1 - size2);
         tx1.getInput(0).setScriptSig(new Script(new byte[109]));
-        assertEquals(78, tx1.getMessageSizeForPriorityCalc());
+        assertEquals(149, tx1.getMessageSizeForPriorityCalc());
         tx1.getInput(0).setScriptSig(new Script(new byte[110]));
-        assertEquals(78, tx1.getMessageSizeForPriorityCalc());
+        assertEquals(149, tx1.getMessageSizeForPriorityCalc());
         tx1.getInput(0).setScriptSig(new Script(new byte[111]));
-        assertEquals(79, tx1.getMessageSizeForPriorityCalc());
+        assertEquals(150, tx1.getMessageSizeForPriorityCalc());
     }
 
     @Test

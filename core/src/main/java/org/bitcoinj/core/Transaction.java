@@ -129,6 +129,8 @@ public class Transaction extends ChildMessage {
 
     private long lockTime;
 
+    private boolean useOceanWitness;
+
     // This is either the time the transaction was broadcast as measured from the local clock, or the time from the
     // block in which it was included. Note that this can be changed by re-orgs so the wallet may update this field.
     // Old serialized transactions don't have this field, thus null is valid. It is used for returning an ordered
@@ -200,10 +202,11 @@ public class Transaction extends ChildMessage {
     public Transaction(NetworkParameters params) {
         super(params);
         version = 1;
+        useOceanWitness = false;
         inputs = new ArrayList<>();
         outputs = new ArrayList<>();
         // We don't initialize appearsIn deliberately as it's only useful for transactions stored in the wallet.
-        length = 8; // 8 for std fields
+        length = 9; // 9 for std fields
     }
 
     /**
@@ -494,7 +497,7 @@ public class Transaction extends ChildMessage {
 
         // read the flag
         byte marker = readBytes(1)[0];
-        boolean useOceanWitness = marker == 0;
+        useOceanWitness = marker == 0;
 
         // First come the inputs.
         long numInputs = readVarInt();
@@ -514,8 +517,10 @@ public class Transaction extends ChildMessage {
         for (long i = 0; i < numOutputs; i++) {
             TransactionOutput output = new TransactionOutput(params, this, payload, cursor, serializer);
             outputs.add(output);
-            long scriptLen = readVarInt(8);
-            optimalEncodingMessageSize += 8 + VarInt.sizeOf(scriptLen) + scriptLen;
+            int lengthToScript = output.getAsset().length + output.getNValue().length +
+                output.getNonce().length;
+            long scriptLen = readVarInt(lengthToScript);
+            optimalEncodingMessageSize += lengthToScript + VarInt.sizeOf(scriptLen) + scriptLen;
             cursor += scriptLen;
         }
         lockTime = readUint32();
@@ -1205,6 +1210,12 @@ public class Transaction extends ChildMessage {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         uint32ToByteStreamLE(version, stream);
+        if(useOceanWitness) {
+            stream.write(Utils.HEX.decode("01"));
+        }
+        else {
+            stream.write(Utils.HEX.decode("00"));
+        }
         stream.write(new VarInt(inputs.size()).encode());
         for (TransactionInput in : inputs)
             in.bitcoinSerialize(stream);

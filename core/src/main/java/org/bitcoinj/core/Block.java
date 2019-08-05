@@ -239,7 +239,7 @@ public class Block extends Message {
             challengeScript.getProgram().length;
         this.proofLength = proofLength;
         this.proofScript = proofScript;
-        HEADER_SIZE_FULL = 172 + (new VarInt(proofLength)).getOriginalSizeInBytes() + 
+        HEADER_SIZE_FULL = HEADER_SIZE_HASH + (new VarInt(proofLength)).getOriginalSizeInBytes() + 
             proofScript.getProgram().length;
         this.transactions = new LinkedList<>();
         this.transactions.addAll(transactions);
@@ -299,8 +299,13 @@ public class Block extends Message {
                 proofScript = new Script(readBytes(proofLength));
             }
         }
+
+        HEADER_SIZE_HASH = 172 + (new VarInt(challengeLength)).getOriginalSizeInBytes() + 
+            ((challengeScript != null && challengeScript.getProgram() != null) ? challengeScript.getProgram().length : 0);
+        HEADER_SIZE_FULL = HEADER_SIZE_HASH + (new VarInt(proofLength)).getOriginalSizeInBytes() + 
+            ((proofScript != null && proofScript.getProgram() != null) ? proofScript.getProgram().length : 0);
             
-        hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(payload, offset, headerCursor - offset));
+        hash = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(payload, offset, HEADER_SIZE_HASH));
         headerBytesValid = serializer.isParseRetainMode();
 
         if (readIncomplete){
@@ -343,7 +348,6 @@ public class Block extends Message {
         Utils.uint32ToByteStreamLE(blockHeight, stream);
 
         if (challengeLength > 0) {
-            stream.write(new VarInt(challengeLength).encode());
             Script.writeBytes(stream, challengeScript.getProgram());
         } else
             stream.write(new VarInt(0).encode());
@@ -352,7 +356,6 @@ public class Block extends Message {
             return;
 
         if (proofLength > 0) {
-            stream.write(new VarInt(proofLength).encode());
             Script.writeBytes(stream, proofScript.getProgram());
         } else
             stream.write(new VarInt(0).encode());

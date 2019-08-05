@@ -183,7 +183,8 @@ public class BitcoinSerializer extends MessageSerializer {
         try {
             return makeMessage(header.command, header.size, payloadBytes, hash, header.checksum);
         } catch (Exception e) {
-            throw new ProtocolException("Error deserializing message " + HEX.encode(payloadBytes) + "\n", e);
+            throw new ProtocolException("Error deserializing message " + HEX.encode(payloadBytes) +
+                " with command " + header.command + "\n", e);
         }
     }
 

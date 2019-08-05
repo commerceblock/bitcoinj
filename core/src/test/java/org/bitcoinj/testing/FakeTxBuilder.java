@@ -30,9 +30,9 @@ import static org.bitcoinj.core.Coin.*;
 import static com.google.common.base.Preconditions.checkState;
 
 public class FakeTxBuilder {
-    public static final byte[] dummyAsset = Utils.HEX.decode("01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d");
-    public static final byte[] dummyNonce = Utils.HEX.decode("00");
-    public static final byte[] dummyValue = Utils.HEX.decode("010000000005f5e100");
+    private static final byte[] dummyAsset = Utils.HEX.decode("01e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d");
+    private static final byte[] dummyNonce = Utils.HEX.decode("00");
+    private static final byte[] dummyValue = Utils.HEX.decode("010000000005f5e100");
 
     /** Create a fake transaction, without change. */
     public static Transaction createFakeTx(final NetworkParameters params) {
@@ -71,7 +71,7 @@ public class FakeTxBuilder {
         Transaction t = new Transaction(params);
         TransactionOutput outputToMe = new TransactionOutput(params, t, asset, nValue, nonce, to);
         t.addOutput(outputToMe);
-        TransactionOutput change = new TransactionOutput(params, t, asset, valueOf(1, 11), nonce, changeOutput);
+        TransactionOutput change = new TransactionOutput(params, t, asset, Coin.getOceanNValue(valueOf(1, 11)), nonce, changeOutput);
         t.addOutput(change);
         // Make a previous tx simply to send us sufficient coins. This prev tx is not really valid but it doesn't
         // matter for our purposes.
@@ -96,11 +96,18 @@ public class FakeTxBuilder {
         TransactionOutput outputToMe = new TransactionOutput(params, t, asset, nValue, nonce, to);
         t.addOutput(outputToMe);
 
+        Coin coinValue = Coin.FIFTY_COINS;
+        if(nValue.length == Message.CONFIDENTIAL_VALUE) {
+            byte[] valueArray = new byte[Message.CONFIDENTIAL_VALUE-1];
+            System.arraycopy(nValue, 1, valueArray, 0, Message.CONFIDENTIAL_VALUE-1);
+            valueArray = Utils.reverseBytes(valueArray);
+            coinValue = Coin.valueOf(Utils.readInt64(valueArray, 0));
+        }
         // Make a random split in the output value so we get a distinct hash when we call this multiple times with same args
         long split = new Random().nextLong();
         if (split < 0) { split *= -1; }
         if (split == 0) { split = 15; }
-        while (split > value.getValue()) {
+        while (split > coinValue.getValue()) {
             split /= 2;
         }
 
@@ -117,7 +124,7 @@ public class FakeTxBuilder {
         // Do it again
         Transaction prevTx2 = new Transaction(params);
         TransactionOutput prevOut2 = new TransactionOutput(params, prevTx2, asset,
-            Coin.getOceanNValue(Coin.valueOf(value.getValue() - split)), nonce, to);
+            Coin.getOceanNValue(Coin.valueOf(coinValue.getValue() - split)), nonce, to);
         prevTx2.addOutput(prevOut2);
         t.addInput(prevOut2).setScriptSig(ScriptBuilder.createInputScript(TransactionSignature.dummy()));
 
@@ -144,7 +151,8 @@ public class FakeTxBuilder {
         Transaction t = new Transaction(params);
         TransactionOutput outputToMe = new TransactionOutput(params, t, asset, nValue, nonce, to);
         t.addOutput(outputToMe);
-        TransactionOutput change = new TransactionOutput(params, t, valueOf(1, 11), new ECKey());
+        TransactionOutput change = new TransactionOutput(params, t, asset, Coin.getOceanNValue(valueOf(1, 11)),
+        nonce, new ECKey());
         t.addOutput(change);
         // Make a previous tx simply to send us sufficient coins. This prev tx is not really valid but it doesn't
         // matter for our purposes.
@@ -167,7 +175,8 @@ public class FakeTxBuilder {
         Transaction t = new Transaction(params);
         TransactionOutput outputToMe = new TransactionOutput(params, t, asset, nValue, nonce, to);
         t.addOutput(outputToMe);
-        TransactionOutput change = new TransactionOutput(params, t, valueOf(1, 11), new ECKey().toAddress(params));
+        TransactionOutput change = new TransactionOutput(params, t, asset, Coin.getOceanNValue(valueOf(1, 11)),
+        nonce, new ECKey().toAddress(params));
         t.addOutput(change);
         // Make a feeder tx that sends to the from address specified. This feeder tx is not really valid but it doesn't
         // matter for our purposes.

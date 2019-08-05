@@ -104,6 +104,7 @@ public class TransactionInput extends ChildMessage {
         this.outpoint = outpoint;
         this.sequence = NO_SEQUENCE;
         this.value = value;
+        this.issuance = new TransactionIssuance();
         setParent(parentTransaction);
         length = 40 + (scriptBytes == null ? 1 : VarInt.sizeOf(scriptBytes.length) + scriptBytes.length);
     }
@@ -121,6 +122,7 @@ public class TransactionInput extends ChildMessage {
         }
         scriptBytes = EMPTY_ARRAY;
         sequence = NO_SEQUENCE;
+        this.issuance = new TransactionIssuance();
         setParent(parentTransaction);
         this.value = output.getValue();
         length = 41;
@@ -153,6 +155,7 @@ public class TransactionInput extends ChildMessage {
     protected void parse() throws ProtocolException {
         outpoint = new TransactionOutPoint(params, payload, cursor, this, serializer);
         isPegin = false;
+        this.issuance = new TransactionIssuance();
         cursor += outpoint.getMessageSize();
         int scriptLen = (int) readVarInt();
         length = cursor - offset + scriptLen + 4;
@@ -161,7 +164,7 @@ public class TransactionInput extends ChildMessage {
         long outpointIndex = outpoint.getIndex();
         if (outpointIndex != MINUS_1) {
             if ((outpointIndex & OUTPOINT_ISSUANCE_FLAG) > 0) {
-                issuance = new TransactionIssuance(
+                this.issuance = new TransactionIssuance(
                     readBytes(32),
                     readBytes(32),
                     readConfidentialValue(),
