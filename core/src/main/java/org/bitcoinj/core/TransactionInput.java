@@ -158,11 +158,10 @@ public class TransactionInput extends ChildMessage {
         this.issuance = new TransactionIssuance();
         cursor += outpoint.getMessageSize();
         int scriptLen = (int) readVarInt();
-        length = cursor - offset + scriptLen + 4;
         scriptBytes = readBytes(scriptLen);
         sequence = readUint32();
         long outpointIndex = outpoint.getIndex();
-        if (outpointIndex != MINUS_1) {
+        if ((outpointIndex & 0xFFFFFFFFL) != 0xFFFFFFFFL) {
             if ((outpointIndex & OUTPOINT_ISSUANCE_FLAG) > 0) {
                 this.issuance = new TransactionIssuance(
                     readBytes(32),
@@ -176,6 +175,7 @@ public class TransactionInput extends ChildMessage {
             }
             outpoint.setIndex(outpointIndex & OUTPOINT_INDEX_MASK);
         }
+        length = cursor - offset;
     }
 
     @Override
@@ -187,7 +187,6 @@ public class TransactionInput extends ChildMessage {
             outpointIndex = (outpointIndex | OUTPOINT_PEGIN_FLAG) >>> 0;
         outpoint.setIndex(outpointIndex);
         outpoint.bitcoinSerialize(stream);
-        outpoint.setIndex(outpointIndex & OUTPOINT_INDEX_MASK);
         stream.write(new VarInt(scriptBytes.length).encode());
         stream.write(scriptBytes);
         Utils.uint32ToByteStreamLE(sequence, stream);

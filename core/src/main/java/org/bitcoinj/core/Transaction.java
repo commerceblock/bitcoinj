@@ -497,7 +497,7 @@ public class Transaction extends ChildMessage {
 
         // read the flag
         byte marker = readBytes(1)[0];
-        useOceanWitness = marker == 0;
+        useOceanWitness = marker == 1;
 
         // First come the inputs.
         long numInputs = readVarInt();
@@ -571,8 +571,9 @@ public class Transaction extends ChildMessage {
      * A transaction is mature if it is either a building coinbase tx that is as deep or deeper than the required coinbase depth, or a non-coinbase tx.
      */
     public boolean isMature() {
-        if (!isCoinBase())
+        if (!isCoinBase()){
             return true;
+        }
 
         if (getConfidence().getConfidenceType() != ConfidenceType.BUILDING)
             return false;
