@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2019 The CommerceBlock Developers
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,9 +22,11 @@ public class TransactionIssuance {
     private byte[] assetamount;
     private byte[] tokenamount;
     private boolean isInitialized;
+    int issuanceLength;
 
     public TransactionIssuance(){
         this.isInitialized = false;
+        this.issuanceLength = 0;
     };
 
     public TransactionIssuance(byte[] assetBlindingNonce, byte[] assetEntropy,
@@ -31,6 +35,7 @@ public class TransactionIssuance {
         this.assetEntropy = assetEntropy;
         this.assetamount = assetamount;
         this.tokenamount = tokenamount;
+        this.issuanceLength = 64 + assetamount.length + tokenamount.length;
         this.isInitialized = true;
     }
 
@@ -52,5 +57,9 @@ public class TransactionIssuance {
 
     public boolean isValid() {
         return isInitialized;
+    }
+
+    public int getLength() {
+        return issuanceLength;
     }
 }

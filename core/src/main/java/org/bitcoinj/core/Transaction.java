@@ -1,6 +1,7 @@
 /*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
+ * Copyright (c) 2019 The CommerceBlock Developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,6 +127,8 @@ public class Transaction extends ChildMessage {
     private long version;
     private ArrayList<TransactionInput> inputs;
     private ArrayList<TransactionOutput> outputs;
+    private ArrayList<TransactionOceanWitnessInput> wInputs;
+    private ArrayList<TransactionOceanWitnessOutput> wOutputs;
 
     private long lockTime;
 
@@ -205,6 +208,8 @@ public class Transaction extends ChildMessage {
         useOceanWitness = false;
         inputs = new ArrayList<>();
         outputs = new ArrayList<>();
+        wInputs = new ArrayList<>();
+        wOutputs = new ArrayList<>();
         // We don't initialize appearsIn deliberately as it's only useful for transactions stored in the wallet.
         length = 9; // 9 for std fields
     }
@@ -457,6 +462,11 @@ public class Transaction extends ChildMessage {
         // jump past version (uint32)
         int cursor = offset + 4;
 
+        byte flagByte = buf[cursor];
+        int flagInt = flagByte & 0xFF;
+
+        cursor += 1;
+
         int i;
         long scriptLen;
 
@@ -478,12 +488,81 @@ public class Transaction extends ChildMessage {
         cursor += varint.getOriginalSizeInBytes();
 
         for (i = 0; i < txOutCount; i++) {
-            // 8 = length of tx value field (uint64)
-            cursor += 8;
+            byte assetByte = buf[cursor];
+            int assetInt = assetByte & 0xFF;
+            cursor += 1;
+
+            if (assetInt == 1 || assetInt == 0xff || assetInt == 10 || assetInt == 11) {
+                cursor += (CONFIDENTIAL_COMMITMENT - 1);
+            }
+
+            byte nonceByte = buf[cursor];
+            int nonceInt = nonceByte & 0xFF;
+            cursor += 1;
+
+            if (nonceInt == 1 || nonceInt == 0xff || nonceInt == 2 || nonceInt == 3) {
+                cursor += (CONFIDENTIAL_COMMITMENT - 1);
+            }
+
+            byte valueByte = buf[cursor];
+            int valueInt = valueByte & 0xFF;
+            cursor += 1;
+
+            if (valueInt == 1 || valueInt == 0xff) {
+                cursor += (CONFIDENTIAL_VALUE - 1);
+            }
+            else if (valueInt == 8 || valueInt == 9) {
+                cursor += (CONFIDENTIAL_COMMITMENT - 1);
+            }
+
             varint = new VarInt(buf, cursor);
             scriptLen = varint.value;
             cursor += scriptLen + varint.getOriginalSizeInBytes();
         }
+
+        if (flagInt == 1) {
+            for (i = 0; i < txInCount; ++i) {
+                //issuance
+                varint = new VarInt(buf, cursor);
+                scriptLen = varint.value;
+                cursor += scriptLen + varint.getOriginalSizeInBytes();
+                //inflation
+                varint = new VarInt(buf, cursor);
+                scriptLen = varint.value;
+                cursor += scriptLen + varint.getOriginalSizeInBytes();
+
+                varint = new VarInt(buf, cursor);
+                long scriptWitLen = varint.value;
+                cursor += varint.getOriginalSizeInBytes();
+                for (int j = 0; j < scriptWitLen; ++j) {
+                    //scriptwit contents
+                    varint = new VarInt(buf, cursor);
+                    scriptLen = varint.value;
+                    cursor += scriptLen + varint.getOriginalSizeInBytes();
+                }
+
+                varint = new VarInt(buf, cursor);
+                long peginLen = varint.value;
+                cursor += varint.getOriginalSizeInBytes();
+                for (int j = 0; j < peginLen; ++j) {
+                    //pegin contents
+                    varint = new VarInt(buf, cursor);
+                    scriptLen = varint.value;
+                    cursor += scriptLen + varint.getOriginalSizeInBytes();
+                }
+            }
+            for (i = 0; i < txOutCount; ++i) {
+                //surjection
+                varint = new VarInt(buf, cursor);
+                scriptLen = varint.value;
+                cursor += scriptLen + varint.getOriginalSizeInBytes();
+                //range
+                varint = new VarInt(buf, cursor);
+                scriptLen = varint.value;
+                cursor += scriptLen + varint.getOriginalSizeInBytes();
+            }
+        }
+
         // 4 = length of lock_time field (uint32)
         return cursor - offset + 4;
     }
@@ -503,17 +582,20 @@ public class Transaction extends ChildMessage {
         long numInputs = readVarInt();
         optimalEncodingMessageSize += VarInt.sizeOf(numInputs);
         inputs = new ArrayList<>((int) numInputs);
+        wInputs = new ArrayList<>((int) numInputs);
         for (long i = 0; i < numInputs; i++) {
             TransactionInput input = new TransactionInput(params, this, payload, cursor, serializer);
             inputs.add(input);
             long scriptLen = readVarInt(TransactionOutPoint.MESSAGE_LENGTH);
             optimalEncodingMessageSize += TransactionOutPoint.MESSAGE_LENGTH + VarInt.sizeOf(scriptLen) + scriptLen + 4;
-            cursor += scriptLen + 4;
+            cursor += scriptLen + 4 +
+                ((input.getIssuance() != null && input.getIssuance().isValid()) ? input.getIssuance().getLength() : 0);
         }
         // Now the outputs
         long numOutputs = readVarInt();
         optimalEncodingMessageSize += VarInt.sizeOf(numOutputs);
         outputs = new ArrayList<>((int) numOutputs);
+        wOutputs = new ArrayList<>((int) numOutputs);
         for (long i = 0; i < numOutputs; i++) {
             TransactionOutput output = new TransactionOutput(params, this, payload, cursor, serializer);
             outputs.add(output);
@@ -527,10 +609,64 @@ public class Transaction extends ChildMessage {
         optimalEncodingMessageSize += 4;
 
         if (useOceanWitness) {
-            //do something
-        }
+            for (int i = 0; i < numInputs; ++i) {
+                byte[] issuancerangeproof = readBytes((int) readVarInt());
+                byte[] inflationrangeproof = readBytes((int) readVarInt());
 
+                int scriptCount = (int) readVarInt();
+                ArrayList<byte[]> scriptWitnessArr = new ArrayList<>(scriptCount);
+                for (int j = 0; j < scriptCount; ++j) {
+                    scriptWitnessArr.add(readBytes((int) readVarInt()));
+                }
+                int peginCount = (int) readVarInt();
+                ArrayList<byte[]> peginWitnessArr = new ArrayList<>(peginCount);
+                for (int j = 0; j < peginCount; ++j) {
+                    peginWitnessArr.add(readBytes((int) readVarInt()));
+                }
+                wInputs.add(new TransactionOceanWitnessInput(issuancerangeproof, inflationrangeproof,
+                    scriptWitnessArr, peginWitnessArr));
+            }
+            for (int i = 0; i < numOutputs; ++i) {
+                byte[] surjectionproof = readBytes((int) readVarInt());
+                byte[] rangeproof = readBytes((int) readVarInt());
+                wOutputs.add(new TransactionOceanWitnessOutput(surjectionproof, rangeproof));
+            }
+        }
         length = cursor - offset;
+    }
+
+    public int getWitnessLength() {
+        int totalLen = 0;
+        for (int i = 0; i < wInputs.size(); ++i) {
+            //issuance
+            totalLen += (new VarInt(wInputs.get(i).getIssuanceRangeProof().length)).getOriginalSizeInBytes() +
+                wInputs.get(i).getIssuanceRangeProof().length;
+            totalLen += (new VarInt(wInputs.get(i).getInflationRangeProof().length)).getOriginalSizeInBytes() +
+                wInputs.get(i).getInflationRangeProof().length;
+
+            ArrayList<byte[]> scriptWit = wInputs.get(i).getScriptWitness();
+            VarInt scriptWitLen = new VarInt(scriptWit.size());
+            totalLen += scriptWitLen.getOriginalSizeInBytes();
+            for (int j = 0; j < scriptWitLen.value; ++j) {
+                totalLen += (new VarInt(scriptWit.get(j).length)).getOriginalSizeInBytes() +
+                scriptWit.get(j).length;
+            }
+
+            ArrayList<byte[]> peginWit = wInputs.get(i).getPeginWitness();
+            VarInt peginWitLen = new VarInt(peginWit.size());
+            totalLen += peginWitLen.getOriginalSizeInBytes();
+            for (int j = 0; j < peginWitLen.value; ++j) {
+                totalLen += (new VarInt(peginWit.get(j).length)).getOriginalSizeInBytes() +
+                peginWit.get(j).length;
+            }
+        }
+        for (int i = 0; i < wOutputs.size(); ++i) {
+            totalLen += (new VarInt(wOutputs.get(i).getSurjectionProof().length)).getOriginalSizeInBytes() +
+            wOutputs.get(i).getSurjectionProof().length;
+            totalLen += (new VarInt(wOutputs.get(i).getRangeProof().length)).getOriginalSizeInBytes() +
+            wOutputs.get(i).getRangeProof().length;
+        }
+        return totalLen;
     }
 
     public int getOptimalEncodingMessageSize() {
@@ -1023,7 +1159,6 @@ public class Transaction extends ChildMessage {
         // the purposes of the code in this method:
         //
         //   https://en.bitcoin.it/wiki/Contracts
-
         try {
             // Create a copy of this transaction to operate upon because we need make changes to the inputs and outputs.
             // It would not be thread-safe to change the attributes of the transaction object itself.
@@ -1090,8 +1225,8 @@ public class Transaction extends ChildMessage {
                 tx.inputs.add(input);
             }
 
-            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(tx.length == UNKNOWN_LENGTH ? 256 : tx.length + 4);
-            tx.bitcoinSerialize(bos);
+            ByteArrayOutputStream bos = new UnsafeByteArrayOutputStream(tx.length == UNKNOWN_LENGTH ? 256 : tx.length + 4 - 1 - getWitnessLength());
+            tx.bitcoinSerialize(bos, true);
             // We also have to write a hash type (sigHashType is actually an unsigned char)
             uint32ToByteStreamLE(0x000000ff & sigHashType, bos);
             // Note that this is NOT reversed to ensure it will be signed correctly. If it were to be printed out
@@ -1211,11 +1346,13 @@ public class Transaction extends ChildMessage {
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
         uint32ToByteStreamLE(version, stream);
-        if(useOceanWitness) {
-            stream.write(Utils.HEX.decode("01"));
-        }
-        else {
-            stream.write(Utils.HEX.decode("00"));
+        if(!this.readIncomplete){
+            if(useOceanWitness) {
+                stream.write(Utils.HEX.decode("01"));
+            }
+            else {
+                stream.write(Utils.HEX.decode("00"));
+            }
         }
         stream.write(new VarInt(inputs.size()).encode());
         for (TransactionInput in : inputs)
@@ -1223,7 +1360,45 @@ public class Transaction extends ChildMessage {
         stream.write(new VarInt(outputs.size()).encode());
         for (TransactionOutput out : outputs)
             out.bitcoinSerialize(stream);
+
         uint32ToByteStreamLE(lockTime, stream);
+
+        if(!this.readIncomplete){
+            if(useOceanWitness) {
+                for (TransactionOceanWitnessInput in : wInputs) {
+                    byte[] issuanceRangeProof = in.getIssuanceRangeProof();
+                    stream.write(new VarInt(issuanceRangeProof.length).encode());
+                    stream.write(issuanceRangeProof);
+
+                    byte[] inflationRangeProof = in.getInflationRangeProof();
+                    stream.write(new VarInt(inflationRangeProof.length).encode());
+                    stream.write(inflationRangeProof);
+
+                    ArrayList<byte[]> scriptWitness = in.getScriptWitness();
+                    stream.write(new VarInt(scriptWitness.size()).encode());
+                    for (byte[] scriptWitnessData : scriptWitness) {
+                        stream.write(new VarInt(scriptWitnessData.length).encode());
+                        stream.write(scriptWitnessData);
+                    }
+
+                    ArrayList<byte[]> peginWitness = in.getPeginWitness();
+                    stream.write(new VarInt(peginWitness.size()).encode());
+                    for (byte[] peginWitnessData : peginWitness) {
+                        stream.write(new VarInt(peginWitnessData.length).encode());
+                        stream.write(peginWitnessData);
+                    }
+                }
+                for (TransactionOceanWitnessOutput out : wOutputs) {
+                    byte[] surjectionProof = out.getSurjectionProof();
+                    stream.write(new VarInt(surjectionProof.length).encode());
+                    stream.write(surjectionProof);
+
+                    byte[] rangeProof = out.getRangeProof();
+                    stream.write(new VarInt(rangeProof.length).encode());
+                    stream.write(rangeProof);
+                }
+            }
+        }
     }
 
 
@@ -1269,6 +1444,15 @@ public class Transaction extends ChildMessage {
         unCache();
     }
 
+    public boolean getFlag() {
+        return useOceanWitness;
+    }
+
+    public void setFlag(boolean oceanWit) {
+        this.useOceanWitness = oceanWit;
+        unCache();
+    }
+
     /** Returns an unmodifiable view of all inputs. */
     public List<TransactionInput> getInputs() {
         return Collections.unmodifiableList(inputs);
@@ -1277,6 +1461,16 @@ public class Transaction extends ChildMessage {
     /** Returns an unmodifiable view of all outputs. */
     public List<TransactionOutput> getOutputs() {
         return Collections.unmodifiableList(outputs);
+    }
+
+    /** Returns an unmodifiable view of all ocean witness inputs. */
+    public List<TransactionOceanWitnessInput> getWitnessInputs() {
+        return Collections.unmodifiableList(wInputs);
+    }
+
+    /** Returns an unmodifiable view of all ocean witness outputs. */
+    public List<TransactionOceanWitnessOutput> getWitnessOutputs() {
+        return Collections.unmodifiableList(wOutputs);
     }
 
     /**

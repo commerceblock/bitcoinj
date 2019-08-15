@@ -1,6 +1,7 @@
 /*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
+ * Copyright (c) 2019 The CommerceBlock Developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,7 +125,7 @@ public class TransactionOutput extends ChildMessage {
         this.scriptBytes = scriptBytes;
         setParent(parent);
         availableForSpending = true;
-        length = 8 + VarInt.sizeOf(scriptBytes.length) + scriptBytes.length;
+        length = asset.length + nValue.length + nonce.length + VarInt.sizeOf(scriptBytes.length) + scriptBytes.length;
     }
 
     public Script getScriptPubKey() throws ScriptException {

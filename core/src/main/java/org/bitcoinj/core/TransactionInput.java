@@ -1,6 +1,7 @@
 /*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
+ * Copyright (c) 2019 The CommerceBlock Developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -158,6 +159,7 @@ public class TransactionInput extends ChildMessage {
         this.issuance = new TransactionIssuance();
         cursor += outpoint.getMessageSize();
         int scriptLen = (int) readVarInt();
+        length = cursor - offset + scriptLen + 4;
         scriptBytes = readBytes(scriptLen);
         sequence = readUint32();
         long outpointIndex = outpoint.getIndex();
@@ -175,7 +177,6 @@ public class TransactionInput extends ChildMessage {
             }
             outpoint.setIndex(outpointIndex & OUTPOINT_INDEX_MASK);
         }
-        length = cursor - offset;
     }
 
     @Override

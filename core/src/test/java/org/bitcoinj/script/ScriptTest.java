@@ -2,6 +2,7 @@
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
  * Copyright 2017 Thomas König
+ * Copyright (c) 2019 The CommerceBlock Developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -324,7 +325,6 @@ public class ScriptTest {
             if ((index & 0xFFFFFFFFL) != 0xFFFFFFFFL) {
                 index = index & Message.OUTPOINT_INDEX_MASK;
             }
-            
             String script = input.get(2).asText();
             Sha256Hash sha256Hash = Sha256Hash.wrap(HEX.decode(hash));
             scriptPubKeys.put(new TransactionOutPoint(PARAMS, index, sha256Hash), parseScriptString(script));
@@ -385,13 +385,15 @@ public class ScriptTest {
                     TransactionInput input = transaction.getInputs().get(i);
                     if (input.getOutpoint().getIndex() == 0xffffffffL)
                         input.getOutpoint().setIndex(-1);
+
                     assertTrue(scriptPubKeys.containsKey(input.getOutpoint()));
+
                     input.getScriptSig().correctlySpends(transaction, i, scriptPubKeys.get(input.getOutpoint()),
                             verifyFlags);
                 }
             } catch (Exception e) {
                 System.err.println(test);
-                System.out.println("Error in test index: " + Integer.toString(testIdx));
+                System.err.println("Error in test index: " + Integer.toString(testIdx));
                 if (transaction != null)
                     System.err.println(transaction);
                 throw e;

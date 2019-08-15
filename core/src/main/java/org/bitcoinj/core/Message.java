@@ -1,6 +1,7 @@
 /*
  * Copyright 2011 Google Inc.
  * Copyright 2014 Andreas Schildbach
+ * Copyright (c) 2019 The CommerceBlock Developers
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +67,7 @@ public abstract class Message {
 
     protected int length = UNKNOWN_LENGTH;
 
-    // A flag used to determine if the full payload read is necessary (e.g. headers only block)
+    // A flag used to determine if the full payload read is necessary (e.g. headers only block or transaction with no flag for hashing)
     protected boolean readIncomplete = false;
 
     // The raw message payload bytes themselves.
@@ -297,6 +298,21 @@ public abstract class Message {
         }
 
         bitcoinSerializeToStream(stream);
+    }
+
+    /**
+     * Serialize this message to the provided OutputStream using the ocean wire format (special case argument).
+     * It is used to pass a variable which can signify that this serialization should be a reduced equivalent of the original -
+     * f.e. transaction that is used for hashing, therefore, should have no flag.
+     * Not thread safe, use only on copies of Message objects.
+     * @param stream
+     * @throws IOException
+     */
+    public final void bitcoinSerialize(OutputStream stream, boolean shouldReduce) throws IOException {
+        this.readIncomplete = shouldReduce;
+        bitcoinSerializeToStream(stream);
+        //Undo the incomplete state to prevent it from changing the transaction functions outside of this function
+        this.readIncomplete = false;
     }
 
     /**
