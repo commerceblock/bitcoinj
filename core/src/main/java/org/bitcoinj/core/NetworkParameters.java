@@ -53,10 +53,15 @@ public abstract class NetworkParameters {
     /** Unit test network. */
     public static final String ID_BTC_UNITTESTNET = "org.bitcoinj.unittest";
 
-    /** The string returned by getId() for the bitcoin cash testnet. */
-    public static final String ID_BCH_MAINNET = "org.bitcoincash.production";
-    /** The string returned by getId() for the bitcoin cash testnet. */
-    public static final String ID_BCH_TESTNET = "org.bitcoincash.test";
+    /** The string returned by getId() for the main, production ocean network where people trade things. */
+    public static final String ID_OCEAN_MAINNET = "org.ocean.production";
+    /** The string returned by getId() for the testnet. */
+    public static final String ID_OCEAN_TESTNET = "org.ocean.test";
+
+    /** The string returned by getId() for the main, production gold network where people trade things. */
+    public static final String ID_GOLD_MAINNET = "org.gold.production";
+    /** The string returned by getId() for the testnet. */
+    public static final String ID_GOLD_TESTNET = "org.gold.test";
 
     /** The string used by the payment protocol to represent the main net. */
     public static final String PAYMENT_PROTOCOL_ID_MAINNET = "main";
@@ -188,10 +193,6 @@ public abstract class NetworkParameters {
             return BitcoinUnitTestParams.get();
         } else if (id.equals(ID_BTC_REGTEST)) {
             return BitcoinRegBitcoinTestParams.get();
-        } else if (id.equals(ID_BCH_MAINNET)) {
-            return BitcoinCashMainNetParams.get();
-        } else if (id.equals(ID_BCH_TESTNET)) {
-            return BitcoinCashTestNet3Params.get();
         } else {
             return null;
         }

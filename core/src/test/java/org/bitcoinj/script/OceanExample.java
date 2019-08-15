@@ -21,8 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.Transaction.SigHash;
 import org.bitcoinj.crypto.TransactionSignature;
-import org.bitcoinj.params.BitcoinMainNetParams;
-import org.bitcoinj.params.BitcoinTestNet3Params;
+import org.bitcoinj.params.OceanTestNetParams;
 import org.bitcoinj.script.Script.VerifyFlag;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
@@ -43,6 +42,7 @@ import java.util.*;
 import static org.bitcoinj.core.Utils.HEX;
 
 class OceanExample {
+    private static final NetworkParameters PARAMS = OceanTestNetParams.get();
     public static void runExample(){
         /*const raw = {
           "flag": 0,

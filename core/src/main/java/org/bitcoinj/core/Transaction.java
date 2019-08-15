@@ -978,6 +978,30 @@ public class Transaction extends ChildMessage {
     }
 
     /**
+     * Creates an output for a contract hash with an OP_RETURN script
+     * 6a - OP_RETURN
+     * 20 - Length of contract hash
+     */
+    public TransactionOutput addContract(Sha256Hash contract) {
+        return addOutput(new TransactionOutput(params, this, Utils.HEX.decode("00"),
+                Utils.HEX.decode("010000000000000000"), Utils.HEX.decode("00"), Utils.HEX.decode("6a20" + contract.toString())));
+    }
+
+    /**
+     * Creates an output for a contract hash bytes with an OP_RETURN script
+     * 6a - OP_RETURN
+     * 20 - Length of contract hash
+     */
+    public TransactionOutput addContract(byte[] contract) {
+        byte[] prefix = Utils.HEX.decode("6a20");
+        byte[] result = new byte[prefix.length + contract.length];
+        System.arraycopy(prefix, 0, result, 0, prefix.length);
+        System.arraycopy(contract, 0, result, prefix.length, contract.length);
+        return addOutput(new TransactionOutput(params, this, Utils.HEX.decode("00"),
+                Utils.HEX.decode("010000000000000000"), Utils.HEX.decode("00"), result));
+    }
+
+    /**
      * Creates an output based on the given address, nonce, asset and value, adds it to this transaction, and returns the new output.
      */
     public TransactionOutput addOutput(byte[] asset, byte[] nValue, byte[] nonce, Address address) {

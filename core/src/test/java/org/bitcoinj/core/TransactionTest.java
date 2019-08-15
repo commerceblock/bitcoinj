@@ -332,6 +332,26 @@ public class TransactionTest {
     }
 
     @Test
+    public void testAddContractHashCheck() throws VerificationException {
+        final byte[] transactionBytes = HEX.decode(
+                "010000000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010000006a4730440220560ab7f8ca79912d4636a1092eda47231bf673ab7c161ac4b7fc2a16ca45c96f0220017696a8eddcc1346cacac0d27c27adacdb3817f76d8d47c4f3dd9d8c5d839a601210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ffffffff0101e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d0100000000000186a0001976a914000000000000000000000000000000000000000088ac00000000");
+        Transaction transaction = PARAMS.getDefaultSerializer().makeTransaction(transactionBytes);
+        transaction.addContract(new Sha256Hash("e6e3e96c0a928d8d1fa0003b0079f6cddd18330fb42deb014465e7cefbb08a85"));
+        assertEquals("010000000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010000006a4730440220560ab7f8ca79912d4636a1092eda47231bf673ab7c161ac4b7fc2a16ca45c96f0220017696a8eddcc1346cacac0d27c27adacdb3817f76d8d47c4f3dd9d8c5d839a601210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ffffffff0201e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d0100000000000186a0001976a914000000000000000000000000000000000000000088ac0001000000000000000000226a20e6e3e96c0a928d8d1fa0003b0079f6cddd18330fb42deb014465e7cefbb08a8500000000",
+            Utils.HEX.encode(transaction.bitcoinSerialize()));
+    }
+
+    @Test
+    public void testAddContractBytesCheck() throws VerificationException {
+        final byte[] transactionBytes = HEX.decode(
+                "010000000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010000006a4730440220560ab7f8ca79912d4636a1092eda47231bf673ab7c161ac4b7fc2a16ca45c96f0220017696a8eddcc1346cacac0d27c27adacdb3817f76d8d47c4f3dd9d8c5d839a601210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ffffffff0101e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d0100000000000186a0001976a914000000000000000000000000000000000000000088ac00000000");
+        Transaction transaction = PARAMS.getDefaultSerializer().makeTransaction(transactionBytes);
+        transaction.addContract(Utils.HEX.decode("e6e3e96c0a928d8d1fa0003b0079f6cddd18330fb42deb014465e7cefbb08a85"));
+        assertEquals("010000000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff010000006a4730440220560ab7f8ca79912d4636a1092eda47231bf673ab7c161ac4b7fc2a16ca45c96f0220017696a8eddcc1346cacac0d27c27adacdb3817f76d8d47c4f3dd9d8c5d839a601210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ffffffff0201e44bd3955e62587468668f367b4702cdcc480454aeedc65c6a3d018e4e61ae3d0100000000000186a0001976a914000000000000000000000000000000000000000088ac0001000000000000000000226a20e6e3e96c0a928d8d1fa0003b0079f6cddd18330fb42deb014465e7cefbb08a8500000000",
+            Utils.HEX.encode(transaction.bitcoinSerialize()));
+    }
+
+    @Test
     public void testCoinbaseHeightCheck() throws VerificationException {
         // Coinbase transaction from block 300,000
         final byte[] transactionBytes = HEX.decode(

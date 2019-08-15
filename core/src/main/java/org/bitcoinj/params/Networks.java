@@ -32,9 +32,7 @@ public class Networks {
     /** Registered networks */
     private static Set<? extends NetworkParameters> networks = ImmutableSet.of(
         BitcoinTestNet3Params.get(),
-        BitcoinMainNetParams.get(),
-        BitcoinCashTestNet3Params.get(),
-        BitcoinCashMainNetParams.get()
+        BitcoinMainNetParams.get()
     );
 
     public static Set<? extends NetworkParameters> get() {
