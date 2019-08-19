@@ -193,6 +193,14 @@ public abstract class NetworkParameters {
             return BitcoinUnitTestParams.get();
         } else if (id.equals(ID_BTC_REGTEST)) {
             return BitcoinRegBitcoinTestParams.get();
+        } else if (id.equals(ID_OCEAN_MAINNET)) {
+            return OceanMainNetParams.get();
+        } else if (id.equals(ID_OCEAN_TESTNET)) {
+            return OceanTestNetParams.get();
+        } else if (id.equals(ID_GOLD_MAINNET)) {
+            return GoldMainNetParams.get();
+        } else if (id.equals(ID_GOLD_TESTNET)) {
+            return GoldTestNetParams.get();
         } else {
             return null;
         }
@@ -202,9 +210,9 @@ public abstract class NetworkParameters {
     @Nullable
     public static NetworkParameters fromPmtProtocolID(String pmtProtocolId) {
         if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_MAINNET)) {
-            return BitcoinMainNetParams.get();
+            return GoldMainNetParams.get();
         } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_TESTNET)) {
-            return BitcoinTestNet3Params.get();
+            return GoldTestNetParams.get();
         } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_UNIT_TESTS)) {
             return BitcoinUnitTestParams.get();
         } else if (pmtProtocolId.equals(PAYMENT_PROTOCOL_ID_REGTEST)) {
